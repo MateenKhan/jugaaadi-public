@@ -22,6 +22,17 @@ const REDUCED =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/**
+ * One dial on the whole load-in sequence. Every duration, delay and overlap in
+ * the entrance timeline is multiplied by this, so pacing is a single number to
+ * change rather than sixteen scattered ones.
+ *
+ * 1 was the original ~2.5s; this is roughly nine seconds end to end. Absurd for
+ * a UI transition and right for an establishing shot — it plays once, before
+ * the reader has scrolled, and its only job is to be watched.
+ */
+const LOAD_SCALE = 1.9
+
 export default function Prototype() {
   const beatCount = FLAT_BEATS.length
   // Beat indices where a new module begins — the points the handoff plays at.
@@ -61,34 +72,48 @@ export default function Prototype() {
     if (document.visibilityState !== 'visible') return
 
     const q = (sel: string) => host.querySelectorAll(sel)
+    const d = (ms: number) => Math.round(ms * LOAD_SCALE)
     const tl = createTimeline({ defaults: { ease: 'out(4)' } })
 
-    // Each stage is roughly twice as long as it was and the overlaps are much
-    // smaller, so the parts arrive one after another instead of piling up. The
-    // whole sequence runs about five seconds — very slow for UI, but this is an
-    // establishing shot and its only job is to be watched.
-    tl.add(q('.dial__disc'), { opacity: [0, 1], scale: [0.72, 1], duration: 1700, delay: 250 })
+    // Overlaps are now small on purpose. Duration alone was not the problem —
+    // stages that start before the previous one has landed all read as
+    // happening at once, which feels fast however long each individually takes.
+    // Nearly sequential, so you watch the dial being built a piece at a time.
+    tl.add(q('.dial__disc'), {
+      opacity: [0, 1],
+      scale: [0.7, 1],
+      duration: d(2000),
+      delay: d(500),
+    })
       .add(
         q('.dial__arc'),
         {
           opacity: [0, 1],
           scale: [0.86, 1],
-          // The arcs sweep in rather than just fading, which gives the ring a
-          // direction of assembly instead of appearing all at once.
-          rotate: [-26, 0],
-          duration: 1500,
-          delay: stagger(190),
+          // The arcs sweep in rather than fading, giving the ring a direction
+          // of assembly instead of simply appearing.
+          rotate: [-30, 0],
+          duration: d(1800),
+          delay: stagger(d(320)),
         },
-        '-=700',
+        `-=${d(400)}`,
       )
       .add(
         q('.dial__ticks'),
-        { opacity: [0, 1], scale: [0.9, 1], rotate: [-14, 0], duration: 1800 },
-        '-=900',
+        { opacity: [0, 1], scale: [0.88, 1], rotate: [-18, 0], duration: d(2200) },
+        `-=${d(500)}`,
       )
-      .add(q('.dial__inner i'), { opacity: [0, 1], duration: 1300, delay: stagger(260) }, '-=600')
-      .add(q('.dial__dome'), { opacity: [0, 1], duration: 1500 }, '-=900')
-      .add(q('.dial__module'), { opacity: [0, 1], scale: [0.88, 1], duration: 1400 }, '-=1000')
+      .add(
+        q('.dial__inner i'),
+        { opacity: [0, 1], duration: d(1600), delay: stagger(d(420)) },
+        `-=${d(400)}`,
+      )
+      .add(q('.dial__dome'), { opacity: [0, 1], duration: d(1800) }, `-=${d(600)}`)
+      .add(
+        q('.dial__module'),
+        { opacity: [0, 1], scale: [0.86, 1], duration: d(1800) },
+        `-=${d(700)}`,
+      )
 
     return () => {
       tl.pause()
