@@ -329,32 +329,28 @@ body::before {
 .dial__arc, .bar__segment { pointer-events: auto; }
 
 /* ── round entrance ───────────────────────────────────────────────────────
-   The ring DRAWS itself round rather than fading in. A conic mask swept from
-   the top: `--reveal` 0 → 1 uncovers it clockwise. Because the mask sits on the
-   parent it clips the arcs, the tick bezel and the head together, so the whole
-   instrument is drawn by one hand.
+   Each ring DRAWS itself round rather than fading in, and — this is the point —
+   they draw in OPPOSITE directions.
 
-   The inner arcs use the inverse wedge, so they travel ANTICLOCKWISE against
-   it. Two sweeps in opposite directions read as a mechanism engaging; two in
-   the same direction would just look like one slow wipe. */
-.dial__ring {
-  position: absolute;
-  inset: 0;
+   The reveal mask used to sit on this shared parent, which meant the coloured
+   arcs and the tick bezel were clipped by the same wedge and therefore swept
+   together. Two rings turning the same way is one slow wipe; turning against
+   each other is a mechanism engaging. So the mask moved down onto each ring
+   individually:
+
+     .dial__arcs   clockwise         `--reveal`
+     .dial__ticks  ANTICLOCKWISE     `--reveal-in`
+     .dial__inner  clockwise         `--reveal`
+
+   The anticlockwise form is the inverse wedge: hide everything from 0 up to
+   (1 - progress), so the visible part grows backwards from the end. */
+.dial__ring { position: absolute; inset: 0; }
+
+/* Clockwise, with the outer arcs — so the three rings alternate outward-in:
+   arcs clockwise, tick bezel against them, hairlines with the arcs again. */
+.dial__inner {
   -webkit-mask: conic-gradient(from -90deg, #000 0 calc(var(--reveal, 1) * 360deg), transparent 0);
   mask: conic-gradient(from -90deg, #000 0 calc(var(--reveal, 1) * 360deg), transparent 0);
-}
-
-.dial__inner {
-  -webkit-mask: conic-gradient(
-    from -90deg,
-    transparent 0 calc((1 - var(--reveal-in, 1)) * 360deg),
-    #000 0
-  );
-  mask: conic-gradient(
-    from -90deg,
-    transparent 0 calc((1 - var(--reveal-in, 1)) * 360deg),
-    #000 0
-  );
 }
 
 /* ── outer: one arc per module ────────────────────────────────────────────── */
@@ -367,7 +363,13 @@ body::before {
 .dial__arcs {
   position: absolute;
   inset: 0;
+  /* Held at 50% and brightening to full as the reel is read. Scene-setting, not
+     the subject — at full strength from the first frame it competes with the
+     module and has nowhere left to go. */
   opacity: calc(0.5 + var(--p, 0) * 0.5);
+  /* Draws CLOCKWISE on load. */
+  -webkit-mask: conic-gradient(from -90deg, #000 0 calc(var(--reveal, 1) * 360deg), transparent 0);
+  mask: conic-gradient(from -90deg, #000 0 calc(var(--reveal, 1) * 360deg), transparent 0);
 }
 
 /* The travelled arc, lit. Previously the coloured ring was inert while you
@@ -507,11 +509,22 @@ body::before {
     transparent calc(360deg / var(--ticks) * 0.42) calc(360deg / var(--ticks))
   );
   filter: drop-shadow(0 0 4px rgba(255, 70, 60, 0.45));
-  /* closest-side — see the note on .dial__arc. A narrow band (91%→100% rather
-     than 78%) is what takes the bulk out: hairline ticks hugging the edge read
-     as an instrument bezel, a wide band reads as a donut. */
-  -webkit-mask: radial-gradient(circle closest-side, transparent 0 90%, #000 91% 100%);
-  mask: radial-gradient(circle closest-side, transparent 0 90%, #000 91% 100%);
+  /* TWO mask layers, intersected.
+       1. the radial band — closest-side, see the note on .dial__arc. A narrow
+          band (91%→100%) is what takes the bulk out: hairline ticks hugging the
+          edge read as an instrument bezel, a wide band reads as a donut.
+       2. the ANTICLOCKWISE reveal — the inverse wedge, hiding everything from 0
+          up to (1 - progress) so the visible part grows backwards from the end.
+     Intersecting is what lets the bezel keep its shape while being drawn on;
+     replacing the mask would lose the band and fill the whole disc. */
+  -webkit-mask:
+    radial-gradient(circle closest-side, transparent 0 90%, #000 91% 100%),
+    conic-gradient(from -90deg, transparent 0 calc((1 - var(--reveal-in, 1)) * 360deg), #000 0);
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle closest-side, transparent 0 90%, #000 91% 100%),
+    conic-gradient(from -90deg, transparent 0 calc((1 - var(--reveal-in, 1)) * 360deg), #000 0);
+  mask-composite: intersect;
 }
 
 /* The lit portion — same tick geometry, clipped to the scroll progress. Two
