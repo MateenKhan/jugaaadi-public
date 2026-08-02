@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Dummy content for the motion prototype.
  *
  * Deliberately NOT the real libraries — this page exists to settle the layout
@@ -112,61 +112,13 @@ export const MODULES: Module[] = [
     ],
   },
   {
-    slug: 'table',
-    name: 'Table',
-    glyph: '▦',
-    tagline: 'Spreadsheet-grade data grid',
-    install: 'npm i @jugaaadi/table',
-    visual: 'grid',
-    progress: 'bar',
-    accent: '#3ddad7',
-    beats: [
-      {
-        label: 'Fill series',
-        headline: 'It finishes your pattern.',
-        body: 'Drag two cells and it infers the step — 2, 4, 6 becomes 8, 10, 12.',
-        bullets: ['Linear and dates', 'Weekdays and months', 'Ctrl to copy instead'],
-        code: `inferSeries([2, 4, 6])\n// → +2`,
-        // All on the right: the copy column owns the left third, and on the
-        // wide flat modules a left-hand leader runs straight under the headline.
-        notes: [
-          { text: 'source cells', x: 36, y: 20, side: 'right', labelY: 10 },
-          { text: 'inferred step', x: 36, y: 64, side: 'right', labelY: 44 },
-          { text: 'fill handle', x: 46, y: 82, side: 'right', labelY: 78 },
-        ],
-      },
-      {
-        label: 'Formulas',
-        headline: 'Point at a cell to name it.',
-        body: 'Type = and the arrow keys pick references, exactly like the app you already know.',
-        bullets: ['A1 and named refs', 'F4 cycles $', 'Marching ants'],
-        code: `=C4+C3`,
-        notes: [
-          { text: 'reference', x: 40, y: 40, side: 'right', labelY: 24 },
-          { text: 'live result', x: 62, y: 58, side: 'right', labelY: 62 },
-        ],
-      },
-      {
-        label: 'Right-click',
-        headline: 'Everything where you expect it.',
-        body: 'Insert, delete and clear, ordered by what you actually have selected.',
-        bullets: ['Context menus', 'Selection-aware order', 'Nothing buried'],
-        code: `onContextMenu → scope.kind`,
-        notes: [
-          { text: 'selection', x: 28, y: 46, side: 'right', labelY: 26 },
-          { text: 'row actions first', x: 64, y: 46, side: 'right', labelY: 64 },
-        ],
-      },
-    ],
-  },
-  {
     slug: 'folder-tree',
     name: 'Folder Tree',
     glyph: '⌂',
     tagline: 'Drag-and-drop tree view',
     install: 'npm i @jugaaadi/folder-tree',
     visual: 'tree',
-    progress: 'bar',
+    progress: 'ring',
     accent: '#a78bfa',
     beats: [
       {
@@ -203,7 +155,7 @@ export const MODULES: Module[] = [
     tagline: 'Unit-aware number input',
     install: 'npm i @jugaaadi/advance-scroll-input',
     visual: 'slider',
-    progress: 'bar',
+    progress: 'ring',
     accent: '#facc15',
     beats: [
       {
@@ -258,6 +210,54 @@ export const MODULES: Module[] = [
         bullets: ['Automatic failover', 'Ordered preference', 'Per-provider keys'],
         code: `withFailover(['groq','cerebras'])`,
         notes: [{ text: 'switched', x: 56, y: 46, side: 'right', labelY: 52 }],
+      },
+    ],
+  },
+  {
+    slug: 'table',
+    name: 'Table',
+    glyph: '▦',
+    tagline: 'Spreadsheet-grade data grid',
+    install: 'npm i @jugaaadi/table',
+    visual: 'grid',
+    progress: 'bar',
+    accent: '#3ddad7',
+    beats: [
+      {
+        label: 'Fill series',
+        headline: 'It finishes your pattern.',
+        body: 'Drag two cells and it infers the step — 2, 4, 6 becomes 8, 10, 12.',
+        bullets: ['Linear and dates', 'Weekdays and months', 'Ctrl to copy instead'],
+        code: `inferSeries([2, 4, 6])\n// → +2`,
+        // All on the right: the copy column owns the left third, and on the
+        // wide flat modules a left-hand leader runs straight under the headline.
+        notes: [
+          { text: 'source cells', x: 36, y: 20, side: 'right', labelY: 10 },
+          { text: 'inferred step', x: 36, y: 64, side: 'right', labelY: 44 },
+          { text: 'fill handle', x: 46, y: 82, side: 'right', labelY: 78 },
+        ],
+      },
+      {
+        label: 'Formulas',
+        headline: 'Point at a cell to name it.',
+        body: 'Type = and the arrow keys pick references, exactly like the app you already know.',
+        bullets: ['A1 and named refs', 'F4 cycles $', 'Marching ants'],
+        code: `=C4+C3`,
+        notes: [
+          { text: 'reference', x: 40, y: 40, side: 'right', labelY: 24 },
+          { text: 'live result', x: 62, y: 58, side: 'right', labelY: 62 },
+        ],
+      },
+      {
+        label: 'Right-click',
+        headline: 'Everything where you expect it.',
+        body: 'Insert, delete and clear, ordered by what you actually have selected.',
+        bullets: ['Context menus', 'Selection-aware order', 'Nothing buried'],
+        code: `onContextMenu → scope.kind`,
+        notes: [
+          { text: 'selection', x: 28, y: 46, side: 'right', labelY: 26 },
+          { text: 'row actions first', x: 64, y: 46, side: 'right', labelY: 64 },
+        ],
       },
     ],
   },

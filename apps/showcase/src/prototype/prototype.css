@@ -236,6 +236,13 @@ body::before {
   height: var(--dial);
   display: grid;
   place-items: center;
+  /* The module handoff, scrubbed. `--mv`, `--sc` and `--op` are written per
+     frame by useReel: the outgoing module rises and shrinks away, the next
+     grows up from below. Combining the lift with the scale is what sells it as
+     depth rather than a slide — the thing recedes as it leaves. */
+  transform: translateY(calc(var(--mv, 0) * 1px)) scale(var(--sc, 1));
+  opacity: var(--op, 1);
+  will-change: transform, opacity;
 }
 
 /* The ring was too bulky: at 74% the module left a fat donut of chrome around
@@ -404,6 +411,16 @@ body::before {
   border-right-color: rgba(255, 226, 214, 0.5);
   border-bottom-color: rgba(255, 226, 214, 0.28);
   transform: rotate(calc(var(--a) * 1deg));
+  /* The page's idle movement, now that nothing animates in the middle. A plain
+     keyframe rather than a timeline: three elements turning forever needs no
+     JS, and the compositor keeps it running regardless. */
+  animation: dial-drift 54s linear infinite;
+}
+.dial__inner i:nth-child(2) { animation-duration: 78s; animation-direction: reverse; }
+.dial__inner i:nth-child(3) { animation-duration: 96s; }
+
+@keyframes dial-drift {
+  to { transform: rotate(calc(var(--a) * 1deg + 360deg)); }
 }
 
 .dial__arc {

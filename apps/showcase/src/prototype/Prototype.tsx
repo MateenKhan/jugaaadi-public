@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { animate, stagger } from 'animejs'
+import { animate, stagger, createTimeline } from 'animejs'
 import { MODULES, FLAT_BEATS } from './modules'
 import { useReel, scrollToBeat, INTRO } from './useReel'
 import Visual from './Visuals'
-import Dial, { IdleCore } from './Dial'
+import Dial from './Dial'
 import Notes from './Notes'
 
 /**
@@ -24,7 +24,16 @@ const REDUCED =
 
 export default function Prototype() {
   const beatCount = FLAT_BEATS.length
-  const { beat, step, started } = useReel(beatCount)
+  // Beat indices where a new module begins — the points the handoff plays at.
+  const boundaries = useMemo(
+    () =>
+      FLAT_BEATS.reduce<number[]>((acc, b, i) => {
+        if (i > 0 && b.moduleIndex !== FLAT_BEATS[i - 1].moduleIndex) acc.push(i)
+        return acc
+      }, []),
+    [],
+  )
+  const { beat, step, started } = useReel(beatCount, boundaries)
   // Icons by default. The demo is what people came for, and an expanded rail
   // spends 264px of the widest screens on navigation nobody has asked for yet;
   // the » control opens it the moment they want to go somewhere.
@@ -33,6 +42,42 @@ export default function Prototype() {
 
   const current = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
   const module = current.module
+  const dialRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * The dial assembles itself on load, slowly, from the outside in.
+   *
+   * Arriving fully-formed gives the reader nothing to watch during the moment
+   * they are orienting — and it is the reference's first two seconds: the ring
+   * draws in before anything else happens. Deliberately unhurried; the whole
+   * sequence is over two seconds, which is slow for a UI animation and right
+   * for an establishing shot.
+   *
+   * Runs once. It is an entrance, not a beat transition.
+   */
+  useEffect(() => {
+    const host = dialRef.current
+    if (!host || REDUCED) return
+    if (document.visibilityState !== 'visible') return
+
+    const q = (sel: string) => host.querySelectorAll(sel)
+    const tl = createTimeline({ defaults: { ease: 'out(3)' } })
+
+    tl.add(q('.dial__disc'), { opacity: [0, 1], scale: [0.82, 1], duration: 1100 })
+      .add(
+        q('.dial__arc'),
+        { opacity: [0, 1], scale: [0.9, 1], duration: 900, delay: stagger(110) },
+        '-=800',
+      )
+      .add(q('.dial__ticks'), { opacity: [0, 1], scale: [0.94, 1], duration: 1000 }, '-=700')
+      .add(q('.dial__inner i'), { opacity: [0, 1], duration: 800, delay: stagger(150) }, '-=650')
+      .add(q('.dial__dome'), { opacity: [0, 1], duration: 900 }, '-=600')
+      .add(q('.dial__module'), { opacity: [0, 1], scale: [0.94, 1], duration: 800 }, '-=750')
+
+    return () => {
+      tl.pause()
+    }
+  }, [])
 
   // The reel occupies the first stretch of the page; the about section lives in
   // normal flow after it, so the stage steps aside once the beats are done.
@@ -69,11 +114,11 @@ export default function Prototype() {
         {/* The module sits dead centre with the scroll dial drawn AROUND it, so
             the progress reads as belonging to the thing you are looking at
             rather than as a widget parked in a corner. */}
-        <div className={`dial dial--${module.progress}`}>
-          {/* Always running, whatever the module — this is what keeps the page
-              from freezing solid the moment the reader stops scrolling. */}
-          <IdleCore dense={module.progress === 'ring'} />
-
+        {/* No decoration inside the circle. The real component sits dead centre
+            — a joystick, a grid, a tree — and anything animating behind it is
+            competing with the thing people came to look at. Idle movement lives
+            on the ring chrome instead, where it cannot collide. */}
+        <div className={`dial dial--${module.progress}`} ref={dialRef}>
           <Dial
             module={module}
             beat={beat}
