@@ -15,7 +15,18 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+
+    /**
+     * Mirrors the Vite alias — see the long comment in vite.config.ts. This is
+     * the only library resolved from `packages/` rather than node_modules,
+     * because it has no npm release yet and its tab needs a live demo anyway.
+     */
+    "paths": {
+      "@jugaaadi/ai-providers": ["../../packages/ai-providers/src/index.ts"],
+      "@jugaaadi/ai-providers/ui": ["../../packages/ai-providers/src/ui/index.ts"],
+      "@jugaaadi/ai-providers/react": ["../../packages/ai-providers/src/react/index.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

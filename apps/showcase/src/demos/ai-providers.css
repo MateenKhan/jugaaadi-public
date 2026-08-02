@@ -1,0 +1,543 @@
+/* AI Providers demo. Inherits the dark tokens from frame.css; everything here
+   is prefixed `aip__` because this document also hosts the package's own modal,
+   which styles itself inline. */
+
+.aip {
+  height: 100%;
+  overflow: auto;
+  padding: 22px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ── Security banner ─────────────────────────────────────────────────────── */
+
+.aip__banner {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 90, 54, 0.35);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 90, 54, 0.09), rgba(255, 90, 54, 0.03));
+}
+
+.aip__bannerText {
+  flex: 1 1 420px;
+  min-width: 260px;
+}
+
+.aip__h1 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.aip__bannerText p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg-muted);
+  max-width: 76ch;
+}
+
+.aip__bannerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.aip__stored {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.aip__warn {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 90, 54, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 90, 54, 0.08);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+
+/* ── Sections ────────────────────────────────────────────────────────────── */
+
+.aip__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aip__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aip__h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.aip__count {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.aip__sub {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+  max-width: 86ch;
+}
+
+.aip__sub code {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--fg-muted);
+}
+
+.aip__empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  text-align: center;
+}
+
+.aip__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.aip__btn {
+  appearance: none;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.aip__btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: #2c3546;
+}
+
+.aip__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.aip__btn--primary {
+  border-color: rgba(255, 90, 54, 0.45);
+  background: rgba(255, 90, 54, 0.12);
+  color: var(--accent);
+}
+
+.aip__btn--primary:hover:not(:disabled) {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.aip__btn--danger {
+  border-color: rgba(255, 122, 92, 0.4);
+  color: #ff9d85;
+}
+
+.aip__btn--quiet {
+  background: none;
+  border-color: transparent;
+  color: var(--fg-dim);
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.aip__toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.aip__chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.aip__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  appearance: none;
+  padding: 6px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.aip__chip[aria-pressed='true'] {
+  border-color: rgba(255, 90, 54, 0.5);
+  background: var(--accent-soft, rgba(255, 90, 54, 0.12));
+  color: var(--accent);
+}
+
+.aip__chipCount {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+
+.aip__chip[aria-pressed='true'] .aip__chipCount {
+  color: inherit;
+}
+
+.aip__search {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 280px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.aip__search:focus {
+  border-color: rgba(255, 90, 54, 0.5);
+}
+
+/* ── Bench table ─────────────────────────────────────────────────────────── */
+
+.aip__benchBar {
+  display: flex;
+  gap: 8px;
+}
+
+.aip__tableWrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow-x: auto;
+}
+
+.aip__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.aip__table th,
+.aip__table td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft, rgba(255, 255, 255, 0.045));
+  vertical-align: middle;
+}
+
+.aip__table tbody tr:last-child th,
+.aip__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.aip__table thead th {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.aip__num {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.aip__colPick {
+  width: 34px;
+}
+
+.aip__rowName {
+  font-weight: 700;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.aip__rowName .aip__pill {
+  margin-left: 8px;
+}
+
+.aip__resultCell {
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.aip__rowActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ── Result states ───────────────────────────────────────────────────────── */
+
+.aip__ok {
+  color: #6ee7a8;
+  font-weight: 700;
+}
+
+.aip__ok em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+
+.aip__fail {
+  color: #ff9d85;
+  line-height: 1.5;
+  display: inline-block;
+}
+
+.aip__running {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.aip__dim {
+  color: var(--fg-dim);
+}
+
+/* ── Provider cards ──────────────────────────────────────────────────────── */
+
+.aip__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+}
+
+.aip__card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.aip__card--connected {
+  border-color: rgba(255, 90, 54, 0.4);
+}
+
+.aip__cardHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.aip__cardName {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aip__pill {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.aip__pill--free {
+  border-color: rgba(110, 231, 168, 0.35);
+  background: rgba(110, 231, 168, 0.12);
+  color: #6ee7a8;
+}
+
+.aip__pill--credits {
+  border-color: rgba(250, 204, 21, 0.32);
+  background: rgba(250, 204, 21, 0.1);
+  color: #facc15;
+}
+
+.aip__pill--paid {
+  border-color: var(--line);
+  background: var(--bg);
+  color: var(--fg-dim);
+}
+
+/* Browser reachability — the thing the registry itself cannot tell you. */
+.aip__access {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.aip__accessLabel {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aip__accessNote {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+
+.aip__access--direct {
+  border-color: rgba(110, 231, 168, 0.28);
+}
+
+.aip__access--direct .aip__accessLabel {
+  color: #6ee7a8;
+}
+
+.aip__access--proxy {
+  border-color: rgba(255, 122, 92, 0.32);
+  background: rgba(255, 122, 92, 0.06);
+}
+
+.aip__access--proxy .aip__accessLabel {
+  color: #ff9d85;
+}
+
+.aip__access--depends .aip__accessLabel,
+.aip__access--unsupported .aip__accessLabel {
+  color: var(--fg-muted);
+}
+
+.aip__note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+.aip__meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.aip__meta dt {
+  color: var(--fg-dim);
+}
+
+.aip__meta dd {
+  margin: 0;
+  font-family: var(--mono);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aip__cardResult {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.aip__cardFoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.aip__spacer {
+  flex: 1 1 auto;
+}
+
+.aip__link {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.aip__link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .aip {
+    padding: 16px 14px 32px;
+  }
+
+  .aip__bannerActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

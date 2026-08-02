@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LIBRARIES, findLibrary, slugFromHash, type Library } from './catalog'
+import {
+  LIBRARIES,
+  findLibrary,
+  hasLiveDemo,
+  isOnNpm,
+  slugFromHash,
+  type Library,
+} from './catalog'
 
 const REPO_URL = 'https://github.com/MateenKhan/jugaaadi-public'
 
@@ -106,7 +113,7 @@ function TabStrip({ slug, onSelect }: { slug: string; onSelect: (slug: string) =
             onClick={() => onSelect(library.slug)}
           >
             {library.name}
-            {!library.published && <span className="tab__dot" aria-label="not yet published" />}
+            {!isOnNpm(library) && <span className="tab__dot" aria-label="not yet published" />}
           </button>
         )
       })}
@@ -120,17 +127,13 @@ function Detail({ library }: { library: Library }) {
       <div className="detail__text">
         <h1 className="detail__title">
           {library.name}
-          {library.published ? (
-            <span className="badge">v{library.version}</span>
-          ) : (
-            <span className="badge badge--soon">source only</span>
-          )}
+          <StatusBadge library={library} />
         </h1>
         <p className="detail__blurb">{library.blurb}</p>
       </div>
 
       <div className="detail__side">
-        {library.published && <InstallLine pkg={library.pkg} />}
+        {isOnNpm(library) && <InstallLine pkg={library.pkg} />}
         <div className="detail__links">
           <a className="ghost-link" href={library.repo} target="_blank" rel="noreferrer">
             Source
@@ -140,7 +143,7 @@ function Detail({ library }: { library: Library }) {
               Docs
             </a>
           )}
-          {library.published && (
+          {isOnNpm(library) && (
             <a
               className="ghost-link"
               href={`https://www.npmjs.com/package/${library.pkg}`}
@@ -154,6 +157,23 @@ function Detail({ library }: { library: Library }) {
       </div>
     </section>
   )
+}
+
+/**
+ * One badge per status. `source-linked` says "built from source" rather than
+ * showing a version, because there is no released version to show — the demo is
+ * whatever commit the submodule is pinned at.
+ */
+function StatusBadge({ library }: { library: Library }) {
+  if (library.status === 'published') return <span className="badge">v{library.version}</span>
+  if (library.status === 'source-linked') {
+    return (
+      <span className="badge badge--soon" title="Demo built from the submodule source, not from npm">
+        built from source
+      </span>
+    )
+  }
+  return <span className="badge badge--soon">source only</span>
 }
 
 function InstallLine({ pkg }: { pkg: string }) {
@@ -186,7 +206,7 @@ function InstallLine({ pkg }: { pkg: string }) {
 }
 
 function Stage({ library }: { library: Library }) {
-  if (!library.published) {
+  if (!hasLiveDemo(library)) {
     return (
       <main className="stage">
         <div className="placeholder">

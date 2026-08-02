@@ -17,6 +17,7 @@ door.
 | Joystick | `@jugaaadi/joystick` | `0.0.1` | [MateenKhan/joystick](https://github.com/MateenKhan/joystick) | [joystick.jugaaadi.com](https://joystick.jugaaadi.com) |
 | Scroll Input | `@jugaaadi/advance-scroll-input` | `0.0.2` | [MateenKhan/advance-scroll-input](https://github.com/MateenKhan/advance-scroll-input) | [scroll-input.jugaaadi.com](https://scroll-input.jugaaadi.com) |
 | DB Browser | `@jugaaadi/db-browser` | source only | [MateenKhan/db-browser](https://github.com/MateenKhan/db-browser) | — |
+| AI Providers | `@jugaaadi/ai-providers` | built from source | [MateenKhan/ai-providers](https://github.com/MateenKhan/ai-providers) | — |
 
 Everything is MIT.
 
@@ -52,7 +53,8 @@ jugaaadi-public/
 │   ├── folder-tree/
 │   ├── joystick/
 │   ├── advance-scroll-input/
-│   └── db-browser/
+│   ├── db-browser/
+│   └── ai-providers/
 ├── apps/showcase/            # the tabbed site
 │   ├── index.html            #   the shell (tab strip + detail panel)
 │   ├── demos/*.html          #   one document per library
@@ -95,6 +97,81 @@ npm --prefix packages/joystick run build
 npm install ./packages/joystick -w @jugaaadi/showcase   # undo with `npm install`
 ```
 
+### Three tab states, not two
+
+A tab used to be one of two things: on npm with a live demo, or not on npm and
+therefore a placeholder. `@jugaaadi/ai-providers` is neither — it has no npm
+release, but its whole point is a browsable registry and a key-testing harness,
+which a placeholder cannot be. So `catalog.ts` carries a `status` with three
+values instead of a `published` boolean:
+
+| `status` | Demo | Install line | Example |
+| --- | --- | --- | --- |
+| `published` | live, from npm | yes, with a version | Table, Joystick |
+| `source-linked` | live, from `packages/<slug>/src` | no — nothing to install | AI Providers |
+| `source-only` | placeholder pointing at the repo | no | DB Browser |
+
+`hasLiveDemo()` decides what the stage renders; `isOnNpm()` decides whether an
+`npm i` line would be honest. Setting `published: true` for an unreleased
+package would have meant printing a version and an install command that do not
+exist, so the third state exists to avoid lying in the UI.
+
+### The `source-linked` exception
+
+Exactly one library breaks the install-from-npm rule, and only until it ships.
+`apps/showcase/vite.config.ts` aliases `@jugaaadi/ai-providers` (and its `/ui`
+and `/react` subpaths) straight at `packages/ai-providers/src`, with a matching
+`paths` entry in `apps/showcase/tsconfig.json` so `tsc` resolves it too.
+
+That works because the package has no bundler config of its own — its build is
+plain `tsc` over ordinary `.ts`/`.tsx` with relative imports, so Vite compiles
+it exactly like showcase source. Its internal imports use the TypeScript-ESM
+`./providers.js` form; Vite maps those back to `.ts` because the importer is
+TypeScript.
+
+Two consequences worth knowing before you touch it:
+
+- **Its dependencies are not installed for you.** npm knows nothing about a Vite
+  alias, so the package's `ai` peer, its fourteen `@ai-sdk/*` adapters and `zod`
+  are listed directly in `apps/showcase/package.json`. All fourteen are
+  required, not optional: the package's `client.ts` names each adapter in a
+  literal `import()`, and Rollup resolves every one of those at build time, so a
+  missing adapter fails the whole build rather than just its provider.
+- **TypeScript is pinned to `~5.6`.** TS 5.7 made typed arrays generic, and the
+  submodule's `vault.ts` passes a `Uint8Array<ArrayBufferLike>` where the newer
+  `lib.dom.d.ts` wants `ArrayBufferView<ArrayBuffer>`. Because the source is
+  compiled here rather than consumed as a prebuilt `.d.ts`, that error lands in
+  `npm run typecheck`. The pin is the smallest honest fix while the link exists;
+  it goes away with the alias.
+
+To undo all of it once the package is on npm: delete the `resolve.alias` block
+and the `paths` entry, drop the extra dependencies, unpin `typescript`, add
+`@jugaaadi/ai-providers` as a normal dependency, and set the catalog row to
+`status: 'published'` with a version.
+
+### The AI Providers tab and CORS
+
+That tab is BYOK: you paste your own key, it is encrypted into the package's
+vault (a non-extractable WebCrypto key, IndexedDB, this origin only) and the
+only request that ever carries it goes straight to the provider's own API. The
+site is static files behind nginx, so there is nowhere else for a key to go.
+
+The catch is CORS. Roughly a quarter of the registry refuses browser-origin
+requests, and from JavaScript that failure is a bare `TypeError: Failed to
+fetch` — no status, no body, indistinguishable from a dead network. Rather than
+offer a test button that mysteriously fails, every provider carries a measured
+verdict in `apps/showcase/src/demos/ai-providers.cors.ts`: 23 of the 32
+single-key providers can be called directly, 8 cannot and say **needs a server
+proxy** on the card. Of the 13 free tiers, 9 work in a browser; Cerebras,
+NVIDIA NIM, GitHub Models and Cloudflare Workers AI do not.
+
+Those values were measured, not read off documentation — a fake key POSTed to
+each real endpoint, then re-checked with `curl` from the deployed origin looking
+for `access-control-allow-origin` on the *response* rather than the preflight
+(OpenAI, Cerebras, Scaleway and the Vercel AI Gateway all pass the preflight and
+then strip the header). CORS policies change without notice; re-run the sweep
+before trusting the table, and update the date in that file.
+
 ## Adding a library
 
 1. `git submodule add https://github.com/MateenKhan/<name>.git packages/<name>`
@@ -103,8 +180,10 @@ npm install ./packages/joystick -w @jugaaadi/showcase   # undo with `npm install
 4. Create `apps/showcase/demos/<name>.html` and `apps/showcase/src/demos/<name>.tsx`.
 5. Register the entry in `apps/showcase/vite.config.ts`.
 
-An unpublished library still gets a tab — set `published: false` and it shows a
-source-only panel instead of a live demo, like `db-browser` does today.
+An unpublished library still gets a tab — set `status: 'source-only'` and it
+shows a repo panel instead of a live demo, like `db-browser` does today. If it
+needs a live demo before it ships, use `status: 'source-linked'` and alias it at
+its submodule source; see [The `source-linked` exception](#the-source-linked-exception).
 
 ## Updating a library
 
