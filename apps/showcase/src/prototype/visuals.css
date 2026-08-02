@@ -86,7 +86,9 @@
   width: 232px;
   height: 232px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 42%, #151a26, #0a0d14 70%);
+  /* Translucent on purpose: the morphing core sits directly behind this, and an
+     opaque fill turned the whole centre into a dead disc that hid it. */
+  background: radial-gradient(circle at 50% 42%, rgba(21, 26, 38, 0.72), rgba(10, 13, 20, 0.86) 70%);
   border: 1px solid var(--line);
   box-shadow:
     inset 0 2px 20px rgba(0, 0, 0, 0.8),
