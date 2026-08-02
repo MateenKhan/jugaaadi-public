@@ -1,19 +1,27 @@
+import { useCallback, useMemo, useState } from 'react'
+import { Joystick } from '@jugaaadi/joystick'
+import '@jugaaadi/joystick/styles.css'
+import { FolderTree, moveNodes, type TreeNode, type TreeNodeId } from '@jugaaadi/folder-tree'
+import '@jugaaadi/folder-tree/styles.css'
+import { DimensionInput, Unit } from '@jugaaadi/advance-scroll-input'
+import '@jugaaadi/advance-scroll-input/styles.css'
+import { PROVIDERS } from '@jugaaadi/ai-providers'
 import type { Module } from './modules'
 
 /**
- * Placeholder stage visuals — abstract stand-ins for the real components.
+ * The real components, on the stage.
  *
- * Continuous motion is NOT passed in as a prop. It arrives as the `--t` CSS
- * variable that `useReel` writes each frame, and the transforms below consume it
- * in `calc()`, so scrubbing costs a compositor update rather than a React
- * render. What React does get is `step` — a coarse 0–7 slice — for the discrete
- * reveals that CSS alone can't express, like "how many cells have filled".
+ * Four of the five render inline. `@jugaaadi/table` does not and cannot: its
+ * stylesheet is a compiled Tailwind bundle including preflight AND
+ * `html, body, #root { overflow: hidden }`, so importing it here would reset
+ * this page's typography and stop it scrolling — which for a scroll-driven reel
+ * is fatal. It gets its own document behind an iframe instead, exactly as the
+ * main showcase does.
  *
- * `data-beat` on the wrapper is what lets the stylesheet apply a different
- * continuous behaviour per beat without any of it reaching JS.
+ * These are not screenshots or mock-ups. The joystick really drags, the tree
+ * really re-parents, the input really parses feet and inches, and the provider
+ * list is the actual registry.
  */
-
-const STEPS = 8
 
 type Props = {
   module: Module
@@ -26,191 +34,185 @@ type Props = {
 export default function Visual({ module, beat, step }: Props) {
   switch (module.visual) {
     case 'ring':
-      return <RingVisual beat={beat} />
+      return <JoystickVisual beat={beat} />
     case 'grid':
-      return <GridVisual beat={beat} step={step} />
+      return <TableVisual />
     case 'tree':
-      return <TreeVisual beat={beat} step={step} />
+      return <TreeVisual beat={beat} />
     case 'slider':
       return <SliderVisual beat={beat} step={step} />
     default:
-      return <NodesVisual beat={beat} step={step} />
+      return <ProvidersVisual beat={beat} step={step} />
   }
 }
 
-type V = { beat: number; step: number }
+/* ── joystick ─────────────────────────────────────────────────────────────── */
 
-/* ── Joystick ─────────────────────────────────────────────────────────────── */
+function JoystickVisual({ beat }: { beat: number }) {
+  const [pos, setPos] = useState({ x: 0, y: 0, z: 0 })
 
-// No `step`: every one of this visual's continuous channels is expressed in CSS
-// against `--t`, so it only re-renders when the beat itself changes.
-function RingVisual({ beat }: { beat: number }) {
   return (
-    <div className="viz viz--ring" data-beat={beat}>
-      <div className="viz-ring__base">
-        <span className="viz-ring__track" />
-        <span className="viz-ring__axis viz-ring__axis--y" />
-        <span className="viz-ring__axis viz-ring__axis--x" />
-        <span className="viz-ring__thumb" />
-      </div>
-
-      {/* The synthetic hand. In the real reel this rides the same path while
-          driving genuine pointer events into the live component. */}
-      <span className="viz-cursor" aria-hidden="true">
-        <Hand />
-      </span>
-
-      <div className="viz-chips">
-        <Chip on={beat >= 1} label="rotate" />
-        <Chip on={beat >= 2} label="z axis" />
-        <Chip on={beat >= 3} label="headless" />
-      </div>
+    <div className="live live--joystick">
+      <Joystick
+        // Each beat foregrounds a different part of the real API rather than
+        // pretending: beat 1 adds the operation switcher, beat 2 the Z toggle.
+        operations={beat >= 1 ? ['move', 'rotate', 'scale'] : ['move']}
+        axes={beat >= 2 ? ['x', 'y', 'z'] : ['x', 'y']}
+        zToggle={beat >= 2}
+        size={190}
+        collapsible={false}
+        label="Transform"
+        onChange={(d) =>
+          setPos((p) => ({ x: p.x + d.x, y: p.y + d.y, z: p.z + d.z }))
+        }
+      />
+      <dl className="live__readout">
+        <div>
+          <dt>x</dt>
+          <dd>{pos.x.toFixed(1)}</dd>
+        </div>
+        <div>
+          <dt>y</dt>
+          <dd>{pos.y.toFixed(1)}</dd>
+        </div>
+        <div>
+          <dt>z</dt>
+          <dd>{pos.z.toFixed(1)}</dd>
+        </div>
+      </dl>
     </div>
   )
 }
 
-/* ── Table ────────────────────────────────────────────────────────────────── */
+/* ── table (iframe — see the note at the top) ─────────────────────────────── */
 
-function GridVisual({ beat, step }: V) {
-  const filled = beat === 0 ? Math.round((step / (STEPS - 1)) * 6) : 0
-
+function TableVisual() {
   return (
-    <div className="viz viz--grid" data-beat={beat}>
-      <div className="viz-grid">
-        {Array.from({ length: 24 }).map((_, i) => {
-          const col = i % 6
-          const row = Math.floor(i / 6)
-          const inSeries = col === 2 && row < filled
-          const isRef = beat === 1 && col === 2 && (row === 1 || row === 2)
-          const inRowSel = beat === 2 && row >= 1 && row <= 2
-          return (
-            <span
-              key={i}
-              className={`viz-cell${inSeries ? ' is-filled' : ''}${isRef ? ' is-ref' : ''}${
-                inRowSel ? ' is-sel' : ''
-              }`}
-            >
-              {inSeries ? (row + 1) * 2 : ''}
-            </span>
-          )
-        })}
-      </div>
-      <div className="viz-chips">
-        <Chip on={beat === 0 && step > 2} label="+2 step" />
-        <Chip on={beat === 1} label="=C4+C3" />
-        <Chip on={beat === 2} label="3 rows" />
-      </div>
+    <div className="live live--table">
+      <iframe
+        src={`${import.meta.env.BASE_URL}demos/table.html`}
+        title="@jugaaadi/table"
+        loading="lazy"
+      />
     </div>
   )
 }
 
-/* ── Folder tree ──────────────────────────────────────────────────────────── */
+/* ── folder tree ──────────────────────────────────────────────────────────── */
 
-const TREE_ROWS = ['Scene', 'Environment', 'Sun', 'Furniture', 'Chair A', 'Chair B', 'Walls']
-const TREE_DEPTH = [0, 1, 2, 1, 2, 2, 1]
+const TREE: TreeNode[] = [
+  {
+    id: 'scene',
+    label: 'Scene',
+    children: [
+      {
+        id: 'furniture',
+        label: 'Furniture',
+        children: [
+          { id: 'table', label: 'Dining table', hint: '1.8 m' },
+          { id: 'chair-a', label: 'Chair A', hint: '0.9 m' },
+          { id: 'chair-b', label: 'Chair B', hint: '0.9 m' },
+        ],
+      },
+      {
+        id: 'lights',
+        label: 'Lighting',
+        children: [
+          { id: 'lamp', label: 'Floor lamp', hint: '1.4 m' },
+          { id: 'pendant', label: 'Pendant', hint: 'opal' },
+        ],
+      },
+    ],
+  },
+]
 
-function TreeVisual({ beat, step }: V) {
+function TreeVisual({ beat }: { beat: number }) {
+  const [nodes, setNodes] = useState<TreeNode[]>(TREE)
+  const [selected, setSelected] = useState<TreeNodeId[]>(['chair-a'])
+  const [search, setSearch] = useState('')
+
+  const onMove = useCallback(
+    (moved: TreeNodeId[], target: TreeNodeId, position: 'before' | 'inside' | 'after') => {
+      setNodes((prev) => moveNodes(prev, moved, target, position))
+    },
+    [],
+  )
+
   return (
-    <div className="viz viz--tree" data-beat={beat}>
-      <div className="viz-tree">
-        {TREE_ROWS.map((label, i) => {
-          const dragged = beat === 0 && i === 4
-          const hit = beat === 1 && (i === 2 || i === 4)
-          return (
-            <span
-              key={label}
-              className={`viz-row${dragged ? ' is-drag' : ''}${hit ? ' is-hit' : ''}${
-                beat === 2 && i === 5 ? ' is-focus' : ''
-              }`}
-              style={{ paddingLeft: `${8 + TREE_DEPTH[i] * 16}px` }}
-            >
-              <i className="viz-row__dot" />
-              {label}
-            </span>
-          )
-        })}
-      </div>
-      <div className="viz-chips">
-        <Chip on={beat === 0 && step > 3} label="re-parented" />
-        <Chip on={beat === 1} label="2 matches" />
-        <Chip on={beat === 2} label="keyboard" />
-      </div>
+    <div className="live live--tree">
+      <FolderTree
+        nodes={nodes}
+        selectedIds={selected}
+        onSelect={setSelected}
+        // Beat 1 is the search beat, so the field only appears there.
+        showSearch={beat === 1}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search the scene…"
+        defaultExpandedIds={['scene', 'furniture', 'lights']}
+        onMove={onMove}
+        ariaLabel="Scene outliner"
+      />
     </div>
   )
 }
 
-/* ── Scroll input ─────────────────────────────────────────────────────────── */
+/* ── scroll input ─────────────────────────────────────────────────────────── */
 
-function SliderVisual({ beat, step }: V) {
-  const scrubbed = Math.round(400 + (step / (STEPS - 1)) * 1400)
-  const value = beat === 0 ? scrubbed : beat === 1 ? 1676 : 5100
-  const text = beat === 1 ? "5' 6\"" : beat === 2 ? '=2*(w+h)' : String(value)
+function SliderVisual({ beat, step }: { beat: number; step: number }) {
+  const [mm, setMm] = useState(1800)
+  const unit = beat === 1 ? Unit.FEET : Unit.MM
 
   return (
-    <div className="viz viz--slider" data-beat={beat}>
-      <div className="viz-field">
-        <span className="viz-field__value">{text}</span>
-        <span className="viz-field__unit">{beat === 2 ? '' : 'mm'}</span>
-        <span className="viz-roller" aria-hidden="true">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <i key={i} style={{ ['--i' as string]: i }} />
-          ))}
-        </span>
-      </div>
-      <div className="viz-readout-big">
-        {value.toLocaleString()}
+    <div className="live live--slider">
+      <label className="live__label">Width</label>
+      <DimensionInput valueMm={mm} onChangeMm={setMm} unit={unit} />
+      <div className="live__big">
+        {Math.round(mm).toLocaleString()}
         <small>mm</small>
       </div>
-      <div className="viz-chips">
-        <Chip on={beat === 0 && step > 2} label="scrubbing" />
-        <Chip on={beat === 1} label="imperial" />
-        <Chip on={beat === 2} label="expression" />
-      </div>
+      <p className="live__hint">
+        {beat === 0 && 'Drag the roller, or type a value.'}
+        {beat === 1 && `Try 5' 6" — it parses what you meant.`}
+        {beat === 2 && 'Start with = for a formula.'}
+      </p>
+      {/* `step` keeps the hint in sync with the beat's own progress. */}
+      <span className="live__pulse" data-on={step > 3} />
     </div>
   )
 }
 
-/* ── AI providers ─────────────────────────────────────────────────────────── */
+/* ── ai providers ─────────────────────────────────────────────────────────── */
 
-function NodesVisual({ beat, step }: V) {
+function ProvidersVisual({ beat, step }: { beat: number; step: number }) {
+  // The real registry, not a mock — free tiers first, which is the point.
+  const list = useMemo(() => {
+    const free = PROVIDERS.filter((p) => p.freeTier === 'free')
+    const credits = PROVIDERS.filter((p) => p.freeTier === 'credits')
+    return [...free, ...credits].slice(0, 18)
+  }, [])
+
+  const lit = beat === 0 ? Math.round(((step + 1) / 8) * list.length) : list.length
+
   return (
-    <div className="viz viz--nodes" data-beat={beat}>
-      <div className="viz-nodes">
-        {Array.from({ length: 12 }).map((_, i) => {
-          const free = i < 5
-          const active =
-            beat === 0 ? (step / (STEPS - 1)) * 12 > i : beat === 1 && (i === 2 || i === 7)
-          return (
-            <span key={i} className={`viz-node${free ? ' is-free' : ''}${active ? ' is-on' : ''}`}>
-              {free ? 'free' : 'paid'}
-            </span>
-          )
-        })}
+    <div className="live live--providers">
+      <div className="live__grid">
+        {list.map((p, i) => (
+          <span
+            key={p.key}
+            className={`live__chip${i < lit ? ' is-on' : ''}${
+              p.freeTier === 'free' ? ' is-free' : ''
+            }`}
+            title={p.freeNote ?? p.name}
+          >
+            {p.name}
+          </span>
+        ))}
       </div>
-      <div className="viz-chips">
-        <Chip on={beat === 0 && step > 4} label="13 free" />
-        <Chip on={beat === 1} label="failover →" />
-      </div>
+      <p className="live__hint">
+        {PROVIDERS.filter((p) => p.freeTier === 'free').length} with an ongoing free tier ·{' '}
+        {PROVIDERS.length} total
+      </p>
     </div>
-  )
-}
-
-/* ── shared ───────────────────────────────────────────────────────────────── */
-
-function Chip({ on, label }: { on: boolean; label: string }) {
-  return <span className={`viz-chip${on ? ' is-on' : ''}`}>{label}</span>
-}
-
-function Hand() {
-  return (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none">
-      <path
-        d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1V4.5a1.5 1.5 0 0 1 3 0V11m0-.5V6.5a1.5 1.5 0 0 1 3 0V13c0 3.9-2.2 7-6 7-2.4 0-3.9-1-4.9-2.6L6 13.4c-.5-.9-.2-2 .7-2.4.7-.4 1.6-.2 2.1.5l.2.3"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 }
