@@ -32,14 +32,27 @@ export type ReelState = {
   started: boolean
 }
 
-/** Ease-in-out over the middle of a beat, flat at either end, so a beat settles
- *  rather than drifting continuously — drift reads as sluggish. */
+/**
+ * Shape a beat's raw 0–1 into the value the visuals read.
+ *
+ * This was the thing that made the reel feel broken. It used to hold a flat
+ * dead zone of 0.18 at BOTH ends, so 36% of every beat's scroll produced no
+ * movement at all — measured: 1% down the page gave t=0.000, 3% still gave
+ * t=0.000 — and then a steep cubic lurched through the remainder. Scrubbed
+ * motion lives or dies on feeling *attached* to the pointer; a third of the
+ * travel doing nothing reads as lag, and the catch-up reads as a jump.
+ *
+ * Now it tracks scroll almost linearly. A 4% settle at each end is enough for a
+ * beat to arrive and rest without the whole thing drifting, and smoothstep is
+ * gentle where the old in/out cubic was violent — its slope never strays far
+ * from 1, so what you scroll is what you get.
+ */
 function shape(t: number): number {
-  const HOLD = 0.18
+  const HOLD = 0.04
   if (t <= HOLD) return 0
   if (t >= 1 - HOLD) return 1
   const u = (t - HOLD) / (1 - HOLD * 2)
-  return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2
+  return u * u * (3 - 2 * u)
 }
 
 export function useReel(beatCount: number): ReelState {
