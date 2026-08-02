@@ -220,6 +220,36 @@ sudo certbot --nginx -d public.jugaaadi.com
 
 Point an `A` record for `public.jugaaadi.com` at the VPS before running certbot.
 
+### Testing the nginx config locally
+
+Don't wait for deploy day to find out the server block is wrong. `npm run dev`
+is a Vite server and exercises none of it — no cache headers, no `try_files`, no
+security headers. `deploy/nginx/local-test.conf` is the same config with the TLS
+block flattened to plain HTTP, so it can run in a container against the real
+build:
+
+```bash
+npm run build
+docker run --rm -d --name jugaaadi-nginx -p 8088:80 \
+  -v "$(pwd)/apps/showcase/dist:/var/www/public.jugaaadi.com:ro" \
+  -v "$(pwd)/deploy/nginx/local-test.conf:/etc/nginx/conf.d/default.conf:ro" \
+  nginx:alpine
+# http://localhost:8088   —   docker rm -f jugaaadi-nginx when done
+```
+
+Keep the two files in sync; only the `listen` and TLS lines should differ. This
+is not hypothetical tidiness — running it is what caught the security headers
+being silently dropped from every response (see the comment in the config about
+nginx's `add_header` inheritance).
+
+Worth checking after a change:
+
+```bash
+curl -sI localhost:8088/ | grep -iE 'cache-control|x-frame|nosniff|referrer'
+curl -sI localhost:8088/assets/<hashed-file>.js | grep -i cache-control  # immutable
+curl -so /dev/null -w '%{http_code}\n' localhost:8088/assets/missing.js  # 404, not 200
+```
+
 ## License
 
 MIT © Mateen Khan
