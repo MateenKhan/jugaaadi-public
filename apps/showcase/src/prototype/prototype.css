@@ -243,57 +243,123 @@ body::before {
 }
 
 .dial__ring { position: absolute; inset: 0; }
-.dial__ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
 
-.dial__track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.07);
-  stroke-width: 0.35;
-}
+/* ── outer: one arc per module ────────────────────────────────────────────── */
 
-.dial__sweep {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 0.7;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 1.4px rgba(255, 90, 54, 0.9));
-  /* pathLength=1 normalises the circle, so the dash maths is just the 0–1
-     progress `useReel` already writes — no circumference arithmetic in JS. */
-  stroke-dasharray: 1;
-  stroke-dashoffset: calc(1 - var(--p, 0));
-}
+.dial__arcs { position: absolute; inset: 0; }
 
-.dial__ticks { position: absolute; inset: 0; }
-
-.dial__tick {
+.dial__arc {
   position: absolute;
   inset: 0;
   border: 0;
-  background: none;
   padding: 0;
-  cursor: pointer;
-  /* Each tick is the full box rotated, with the dot pinned to the top edge —
-     so it lands on the circle at any size with no trigonometry. */
-}
-.dial__tick i {
-  position: absolute;
-  top: -3px;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  transition: background 260ms ease, transform 260ms cubic-bezier(0.22,1,0.36,1),
-    box-shadow 260ms ease;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 260ms ease, filter 260ms ease;
+  /* A conic slice, hollowed to a band. Two masks: the conic gradient decides
+     WHICH slice is painted, the radial mask turns the disc into a ring. */
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 var(--from),
+    var(--hue) var(--from) var(--to),
+    transparent var(--to) 360deg
+  );
+  /* `closest-side` is load-bearing: a bare `circle` sizes to farthest-CORNER,
+     so percentage stops are measured along the diagonal (~1.41x the radius) and
+     the band lands outside the box entirely. */
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 92%, #000 93% 99%, transparent 99.5%);
+  mask: radial-gradient(circle closest-side, transparent 0 92%, #000 93% 99%, transparent 99.5%);
 }
-.dial__tick:hover i { background: rgba(255, 255, 255, 0.5); transform: scale(1.3); }
-.dial__tick.is-past i { background: rgba(255, 90, 54, 0.55); }
-.dial__tick.is-active i {
+.dial__arc:hover { opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+
+/* ── middle: the dense tick ring ──────────────────────────────────────────── */
+
+.dial__ticks {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  /* The unlit ticks. `repeating-conic-gradient` draws every tick in one paint,
+     and the radial mask clips the disc down to a band — so tick COUNT costs
+     nothing, unlike one DOM node per tick. */
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.16) 0deg calc(360deg / var(--ticks) * 0.42),
+    transparent calc(360deg / var(--ticks) * 0.42) calc(360deg / var(--ticks))
+  );
+  /* closest-side — see the note on .dial__arc. */
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 78%, #000 79% 100%);
+  mask: radial-gradient(circle closest-side, transparent 0 78%, #000 79% 100%);
+}
+
+/* The lit portion — same tick geometry, clipped to the scroll progress. Two
+   stacked conic gradients: one cuts the ticks, one cuts the sweep. */
+.dial__ticks-lit {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    var(--accent) 0deg calc(360deg / var(--ticks) * 0.42),
+    transparent calc(360deg / var(--ticks) * 0.42) calc(360deg / var(--ticks))
+  );
+  filter: drop-shadow(0 0 3px rgba(255, 90, 54, 0.8));
+  -webkit-mask: conic-gradient(from 0deg, #000 0 calc(var(--p, 0) * 360deg), transparent 0);
+  mask: conic-gradient(from 0deg, #000 0 calc(var(--p, 0) * 360deg), transparent 0);
+}
+
+/* ── the head marker, riding the ring ─────────────────────────────────────── */
+
+.dial__head {
+  position: absolute;
+  inset: 6%;
+  /* Rotating the whole box and pinning the dot to its top edge puts the marker
+     on the circle at any size, with no trigonometry per frame. */
+  transform: rotate(calc(var(--p, 0) * 360deg));
+  pointer-events: none;
+}
+.dial__head i {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
   background: var(--accent);
-  transform: scale(1.9);
-  box-shadow: 0 0 12px rgba(255, 90, 54, 0.95);
+  box-shadow: 0 0 14px 2px rgba(255, 90, 54, 0.85);
 }
+
+/* ── inner: the idle core ─────────────────────────────────────────────────── */
+
+.dial__core {
+  position: absolute;
+  inset: 12%;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  opacity: 0.34;
+  pointer-events: none;
+}
+.dial__core ellipse {
+  fill: none;
+  stroke: var(--accent-2);
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.dial__count {
+  position: absolute;
+  left: 50%;
+  bottom: -30px;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-mute);
+  letter-spacing: 0.06em;
+}
+.dial__count i { font-style: normal; color: var(--fg-dim); }
 
 /* ── hud: copy floating over the stage ────────────────────────────────────── */
 

@@ -3,6 +3,7 @@ import { animate, stagger } from 'animejs'
 import { MODULES, FLAT_BEATS } from './modules'
 import { useReel, scrollToBeat } from './useReel'
 import Visual from './Visuals'
+import Dial from './Dial'
 
 /**
  * Motion prototype — layout and animation language only, dummy content.
@@ -62,7 +63,7 @@ export default function Prototype() {
             the progress reads as belonging to the thing you are looking at
             rather than as a widget parked in a corner. */}
         <div className="dial">
-          <ScrollDial beat={beat} beatCount={beatCount} onJump={(b) => scrollToBeat(b, beatCount)} />
+          <Dial beat={beat} beatCount={beatCount} onJump={(b) => scrollToBeat(b, beatCount)} />
           <div className="dial__module">
             <Visual module={module} beat={current.beatIndex} step={step} />
           </div>
@@ -325,57 +326,6 @@ function Docs({
           </div>
         </div>
       ))}
-    </div>
-  )
-}
-
-/* ── progress ring ────────────────────────────────────────────────────────── */
-
-/**
- * The scroll dial — drawn AROUND the module rather than parked in a corner, so
- * the progress plainly belongs to the thing being demonstrated.
- *
- * The sweep is a stroked circle whose dashoffset comes from `--p`, the variable
- * `useReel` writes each frame, so it stays continuous without React. One tick
- * per beat sits on the same circle, and each tick is a button — the dial doubles
- * as a jump menu, which is also why the reel never needs to trap scroll.
- */
-function ScrollDial({
-  beat,
-  beatCount,
-  onJump,
-}: {
-  beat: number
-  beatCount: number
-  onJump: (beat: number) => void
-}) {
-  const R = 47 // in the 100×100 viewBox
-  const C = 2 * Math.PI * R
-
-  return (
-    <div className="dial__ring" style={{ ['--c' as string]: `${C.toFixed(3)}` }}>
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <circle cx="50" cy="50" r={R} className="dial__track" />
-        <circle cx="50" cy="50" r={R} className="dial__sweep" pathLength={1} />
-      </svg>
-
-      {/* Ticks are laid out with a rotation per beat, so they need no maths at
-          paint time and stay perfectly on the circle at any size. */}
-      <div className="dial__ticks">
-        {Array.from({ length: beatCount }).map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            className={`dial__tick${i === beat ? ' is-active' : ''}${i < beat ? ' is-past' : ''}`}
-            style={{ transform: `rotate(${(i / beatCount) * 360}deg)` }}
-            onClick={() => onJump(i)}
-            aria-label={`Go to step ${i + 1} of ${beatCount}`}
-            aria-current={i === beat}
-          >
-            <i />
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
