@@ -105,7 +105,7 @@ export const LIBRARIES: Library[] = [
     repo: 'https://github.com/MateenKhan/advance-scroll-input',
     docs: 'https://scroll-input.jugaaadi.com',
     status: 'published',
-    version: '0.0.2',
+    version: '0.0.3',
   },
   {
     slug: 'db-browser',

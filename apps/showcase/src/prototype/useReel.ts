@@ -69,50 +69,17 @@ function shape(t: number): number {
  * It eats into the DWELL at the end of the outgoing beat and the lead-in of the
  * incoming one, which is the right place for it: nothing else is moving there,
  * so the swap gets the stage to itself.
- */
-const SWAP_W = 0.3
-
-/**
- * Writes the module handoff to CSS variables.
  *
- * At a module boundary the outgoing module rises and shrinks away while the
- * next grows up from below. Both halves are scrubbed, so dragging the scrollbar
- * backwards reverses the swap exactly like everything else.
- *
- * Only ONE module is mounted at a time — `beat` flips to the new module exactly
- * at the boundary, which is the midpoint of the window. So this is not a
- * crossfade between two live elements; it is one element leaving and the next
- * arriving, with the swap hidden at the moment both are smallest and faintest.
+ * The handoff itself is no longer computed here. It used to be three more CSS
+ * variables written from this loop; it is now an anime.js ScrollObserver (see
+ * useModuleSwap in Prototype.tsx), which is the library's own answer to
+ * scroll-linked animation and brings `syncSmooth` with it — smoothing that
+ * raw scroll reads cannot give, and which is most of the difference between a
+ * transition that tracks the wheel's jitter and one that glides.
  */
-function writeSwap(root: HTMLElement, scaled: number, boundaries: number[]) {
-  let mv = 0
-  let sc = 1
-  let op = 1
+export const SWAP_W = 0.3
 
-  for (const b of boundaries) {
-    const d = scaled - b
-    if (d < -SWAP_W || d > SWAP_W) continue
-
-    if (d < 0) {
-      const p = (d + SWAP_W) / SWAP_W // 0 → 1 as it leaves
-      mv = -p * 90
-      sc = 1 - p * 0.22
-      op = 1 - p * 0.85
-    } else {
-      const q = d / SWAP_W // 0 → 1 as it arrives
-      mv = (1 - q) * 90
-      sc = 0.78 + q * 0.22
-      op = 0.15 + q * 0.85
-    }
-    break
-  }
-
-  root.style.setProperty('--mv', mv.toFixed(2))
-  root.style.setProperty('--sc', sc.toFixed(4))
-  root.style.setProperty('--op', op.toFixed(3))
-}
-
-export function useReel(beatCount: number, boundaries: number[] = []): ReelState {
+export function useReel(beatCount: number): ReelState {
   const [state, setState] = useState<ReelState>({ beat: 0, step: 0, started: false })
   const lastRef = useRef('')
 
@@ -136,7 +103,6 @@ export function useReel(beatCount: number, boundaries: number[] = []): ReelState
       // Continuous channels — compositor only, no React.
       root.style.setProperty('--t', eased.toFixed(4))
       root.style.setProperty('--p', progress.toFixed(5))
-      writeSwap(root, scaled, boundaries)
 
       const step = Math.min(STEPS - 1, Math.floor(eased * STEPS))
       const started = window.scrollY > 8
@@ -152,11 +118,9 @@ export function useReel(beatCount: number, boundaries: number[] = []): ReelState
     raf = requestAnimationFrame(read)
     return () => {
       cancelAnimationFrame(raf)
-      for (const v of ['--t', '--p', '--mv', '--sc', '--op']) root.style.removeProperty(v)
+      for (const v of ['--t', '--p']) root.style.removeProperty(v)
     }
-    // `boundaries` is a stable module-derived list; joined so a new array
-    // identity with the same contents does not restart the loop.
-  }, [beatCount, boundaries.join(',')])
+  }, [beatCount])
 
   return state
 }
