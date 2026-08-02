@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { animate, stagger } from 'animejs'
 import { MODULES, FLAT_BEATS } from './modules'
-import { useReel, scrollToBeat } from './useReel'
+import { useReel, scrollToBeat, INTRO } from './useReel'
 import Visual from './Visuals'
 import Dial, { IdleCore } from './Dial'
 import Notes from './Notes'
@@ -25,7 +25,10 @@ const REDUCED =
 export default function Prototype() {
   const beatCount = FLAT_BEATS.length
   const { beat, step, started } = useReel(beatCount)
-  const [railMode, setRailMode] = useState<RailMode>('expanded')
+  // Icons by default. The demo is what people came for, and an expanded rail
+  // spends 264px of the widest screens on navigation nobody has asked for yet;
+  // the » control opens it the moment they want to go somewhere.
+  const [railMode, setRailMode] = useState<RailMode>('icons')
   const [railOpen, setRailOpen] = useState(false) // small screens
 
   const current = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
@@ -117,8 +120,13 @@ export default function Prototype() {
         </div>
       </div>
 
-      {/* The scroll runway the fixed stage reads. One slot per beat. */}
-      <div className="runway" style={{ height: `${beatCount * 100}vh` }} aria-hidden="true" />
+      {/* The scroll runway the fixed stage reads: one screen per beat, plus the
+          still intro screen before the first one starts moving. */}
+      <div
+        className="runway"
+        style={{ height: `${(beatCount + INTRO) * 100}vh` }}
+        aria-hidden="true"
+      />
 
       <About />
     </div>
@@ -262,6 +270,12 @@ function Callout({ beat }: { beat: number }) {
 
   useLayoutEffect(() => {
     if (REDUCED) return
+    // Never start a reveal while the document is hidden. anime.js writes the
+    // `from` state (opacity 0) immediately and then advances on rAF — which a
+    // background tab suspends — so the copy would be set invisible and left
+    // that way indefinitely. An entrance nobody can see is not worth playing,
+    // and leaving the text visible is the safe failure.
+    if (document.visibilityState !== 'visible') return
     const words = ref.current?.querySelectorAll('.word > span')
     if (words?.length) {
       animate(words, {

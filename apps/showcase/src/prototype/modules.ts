@@ -127,10 +127,12 @@ export const MODULES: Module[] = [
         body: 'Drag two cells and it infers the step — 2, 4, 6 becomes 8, 10, 12.',
         bullets: ['Linear and dates', 'Weekdays and months', 'Ctrl to copy instead'],
         code: `inferSeries([2, 4, 6])\n// → +2`,
+        // All on the right: the copy column owns the left third, and on the
+        // wide flat modules a left-hand leader runs straight under the headline.
         notes: [
-          { text: 'source cells', x: 36, y: 20, side: 'left', labelY: 12 },
-          { text: 'inferred step', x: 36, y: 64, side: 'left', labelY: 60 },
-          { text: 'fill handle', x: 46, y: 82, side: 'right', labelY: 86 },
+          { text: 'source cells', x: 36, y: 20, side: 'right', labelY: 10 },
+          { text: 'inferred step', x: 36, y: 64, side: 'right', labelY: 44 },
+          { text: 'fill handle', x: 46, y: 82, side: 'right', labelY: 78 },
         ],
       },
       {
@@ -140,8 +142,8 @@ export const MODULES: Module[] = [
         bullets: ['A1 and named refs', 'F4 cycles $', 'Marching ants'],
         code: `=C4+C3`,
         notes: [
-          { text: 'reference', x: 40, y: 40, side: 'left', labelY: 30 },
-          { text: 'live result', x: 62, y: 58, side: 'right', labelY: 64 },
+          { text: 'reference', x: 40, y: 40, side: 'right', labelY: 24 },
+          { text: 'live result', x: 62, y: 58, side: 'right', labelY: 62 },
         ],
       },
       {
@@ -151,8 +153,8 @@ export const MODULES: Module[] = [
         bullets: ['Context menus', 'Selection-aware order', 'Nothing buried'],
         code: `onContextMenu → scope.kind`,
         notes: [
-          { text: 'selection', x: 28, y: 46, side: 'left', labelY: 34 },
-          { text: 'row actions first', x: 64, y: 46, side: 'right', labelY: 30 },
+          { text: 'selection', x: 28, y: 46, side: 'right', labelY: 26 },
+          { text: 'row actions first', x: 64, y: 46, side: 'right', labelY: 64 },
         ],
       },
     ],
@@ -174,8 +176,8 @@ export const MODULES: Module[] = [
         bullets: ['moveNodes() helper', 'Guarded drops', 'Multi-node drag'],
         code: `onMove={(ids, target, pos) =>\n  setNodes(moveNodes(...))}`,
         notes: [
-          { text: 'dragged row', x: 40, y: 56, side: 'left', labelY: 44 },
-          { text: 'drop target', x: 40, y: 34, side: 'right', labelY: 26 },
+          { text: 'dragged row', x: 40, y: 56, side: 'right', labelY: 62 },
+          { text: 'drop target', x: 40, y: 34, side: 'right', labelY: 24 },
         ],
       },
       {

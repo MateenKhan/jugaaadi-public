@@ -259,35 +259,53 @@ body::before {
 /* Big. In the reference the animated shape FILLS the inner disc — it is the
    star of the frame, not a texture behind the star. At inset 20% this sat in a
    large dark void and read as a faint smudge. */
+/* An ANNULUS, not a disc. The centre is where the REAL component will live — a
+   table, a tree, a joystick — and decoration underneath it would fight the
+   content the moment the placeholder is replaced. Masking the middle out keeps
+   the motion in the ring where it belongs and leaves the stage genuinely
+   clear. */
 .idle-core {
   position: absolute;
-  inset: 13%;
+  inset: 11%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   pointer-events: none;
   z-index: 2;
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 44%, #000 58% 96%, transparent 100%);
+  mask: radial-gradient(circle closest-side, transparent 0 44%, #000 58% 96%, transparent 100%);
 }
 /* Each line's WIDTH is its place in the lens envelope (set inline); scaleX is
    the morph on top. Crimson, matching the tick ring, so the dial reads as one
    instrument rather than two unrelated colour stories. */
+/* Thicker and brighter. At 2px and 75% alpha these washed out into the dark
+   and the whole core read as grey haze rather than as light. */
 .idle-core__line {
-  height: 2px;
-  border-radius: 1px;
+  height: 3px;
+  border-radius: 2px;
   background: linear-gradient(
     to right,
     rgba(255, 60, 70, 0) 0%,
-    rgba(255, 82, 86, 0.9) 20%,
-    rgba(255, 150, 130, 1) 50%,
-    rgba(255, 82, 86, 0.9) 80%,
+    rgba(255, 96, 92, 1) 18%,
+    rgba(255, 176, 150, 1) 50%,
+    rgba(255, 96, 92, 1) 82%,
     rgba(255, 60, 70, 0) 100%
   );
+  box-shadow: 0 0 10px rgba(255, 80, 70, 0.55);
   transform: scaleX(0.4);
   will-change: transform;
 }
 .idle-core--dense { inset: 15%; }
-.dial--bar .idle-core { inset: 6% 12%; opacity: 0.5; }
+
+/* No decorative core at all on the flat modules.
+ *
+ * A radial annulus over a RECTANGULAR component renders as a donut sitting on
+ * the grid — content and decoration fighting for the same pixels, which is
+ * exactly the failure that would bite hardest once a real table lives here.
+ * The flat tick strip already supplies this variant's idle movement, so the
+ * stage stays clear for the thing being demonstrated. */
+.dial--bar .idle-core { display: none; }
 
 /* Paint order, back to front: sunken disc, morphing core, the module itself,
    then the glass dome over everything. The core has to sit BEHIND the module
@@ -308,6 +326,35 @@ body::before {
 /* ── outer: one arc per module ────────────────────────────────────────────── */
 
 .dial__arcs { position: absolute; inset: 0; }
+
+/* The travelled arc, lit. Previously the coloured ring was inert while you
+   scrolled — the sweep only showed on the tick bezel, so the most prominent
+   element on screen never acknowledged your input. This is the same conic
+   trick: a brighter copy of every arc, clipped to `--p`, laid over the top. */
+.dial__arcs::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    #4ade80 0deg 84deg,
+    #ff5a36 84deg 156deg,
+    #facc15 156deg 228deg,
+    #a78bfa 228deg 300deg,
+    #3ddad7 300deg 360deg
+  );
+  -webkit-mask:
+    radial-gradient(circle closest-side, transparent 0 94%, #000 94.5% 99.5%),
+    conic-gradient(from 0deg, #000 0 calc(var(--p, 0) * 360deg), transparent 0);
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle closest-side, transparent 0 94%, #000 94.5% 99.5%),
+    conic-gradient(from 0deg, #000 0 calc(var(--p, 0) * 360deg), transparent 0);
+  mask-composite: intersect;
+  filter: brightness(1.7) drop-shadow(0 0 10px rgba(255, 255, 255, 0.35));
+}
 
 /* Sunken disc + glass dome — the depth the flat version was missing. */
 .dial__disc {
@@ -570,11 +617,15 @@ body::before {
   letter-spacing: 0.01em;
   color: var(--fg);
   white-space: nowrap;
-  opacity: 0;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
 }
-.note__label--left { right: calc(100% + 30px); text-align: right; }
-.note__label--right { left: calc(100% + 30px); }
+/* Pinned to the SAME percentage the leader line ends at (REACH in Notes.tsx),
+   so the label always sits exactly at the end of its rule. Offsetting the label
+   in px while the line ended at a percentage of the box meant the two drifted
+   apart as the module resized — and on the wide flat modules the line reached
+   far enough left to run under the headline. */
+.note__label--left { right: 115%; margin-right: 8px; text-align: right; }
+.note__label--right { left: 115%; margin-left: 8px; }
 
 .dial__count {
   position: absolute;
@@ -692,13 +743,20 @@ body::before {
   color: var(--hue, var(--accent));
 }
 
+/* NOTE on the opacity defaults below.
+ *
+ * These used to start at 0 and rely on anime.js to reveal them, which meant
+ * the headline, rule and bullets were invisible whenever the animation did not
+ * run — a throttled tab, reduced-motion, or any error in the timeline left the
+ * page with no copy at all. Content must never be gated on animation. They
+ * default to visible now, and the reveal supplies its own `from` state via
+ * `opacity: [0, 1]`, so nothing is lost when it does run. */
 .callout__rule {
   display: block;
   width: 100%;
   height: 1px;
   margin: 24px 0 18px;
   background: var(--line);
-  opacity: 0;
 }
 
 .bullets { list-style: none; margin: 0; padding: 0; }
@@ -710,7 +768,6 @@ body::before {
   font-size: 14.5px;
   font-weight: 550;
   color: var(--fg);
-  opacity: 0;
 }
 .bullets i { font-style: normal; color: var(--hue, var(--accent)); font-size: 13px; }
 
@@ -725,9 +782,18 @@ body::before {
   color: var(--hue, var(--fg));
   text-shadow: 0 2px 30px rgba(0, 0, 0, 0.75);
 }
-.callout__title .word { display: inline-block; overflow: hidden; padding-bottom: 0.06em; }
+/* `overflow: hidden` is what lets a word slide up from nothing — but it also
+   crops descenders, which is why "Drag past" lost the tails of its g and p.
+   The padding gives the glyphs room inside the clip; the equal negative margin
+   keeps the line box exactly where it was, so nothing shifts. */
+.callout__title .word {
+  display: inline-block;
+  overflow: hidden;
+  padding: 0.14em 0.04em 0.2em;
+  margin: -0.14em -0.04em -0.2em;
+}
 .callout__title .word > span { display: inline-block; will-change: transform, opacity, filter; }
-.callout__title .word + .word { margin-left: 0.26em; }
+.callout__title .word + .word { margin-left: 0.22em; }
 
 .callout__body {
   margin: 12px 0 0;

@@ -28,8 +28,10 @@ const REDUCED =
  * horizontal final segment is what makes the label read as attached rather than
  * merely near: the eye follows a straight rule to its end.
  */
+const REACH = 15 // % of the module box the leader extends past its edge
+
 function leader(note: Note): string {
-  const endX = note.side === 'left' ? -34 : 134
+  const endX = note.side === 'left' ? -REACH : 100 + REACH
   const elbowX = note.side === 'left' ? Math.min(note.x - 10, 4) : Math.max(note.x + 10, 96)
   return `M ${note.x} ${note.y} L ${elbowX} ${note.labelY} L ${endX} ${note.labelY}`
 }
@@ -40,6 +42,10 @@ export default function Notes({ notes, beat }: { notes: Note[]; beat: number }) 
   useEffect(() => {
     const host = ref.current
     if (!host || REDUCED || !notes.length) return
+    // See the note in Prototype's Callout: a reveal started while the document
+    // is hidden sets its `from` state and then stalls, leaving the labels
+    // invisible for good.
+    if (document.visibilityState !== 'visible') return
 
     const paths = svg.createDrawable(host.querySelectorAll('path'))
     const line = animate(paths, {

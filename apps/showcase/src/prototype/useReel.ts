@@ -35,23 +35,31 @@ export type ReelState = {
 /**
  * Shape a beat's raw 0–1 into the value the visuals read.
  *
- * This was the thing that made the reel feel broken. It used to hold a flat
- * dead zone of 0.18 at BOTH ends, so 36% of every beat's scroll produced no
- * movement at all — measured: 1% down the page gave t=0.000, 3% still gave
- * t=0.000 — and then a steep cubic lurched through the remainder. Scrubbed
- * motion lives or dies on feeling *attached* to the pointer; a third of the
- * travel doing nothing reads as lag, and the catch-up reads as a jump.
+ * DELIBERATELY ASYMMETRIC, and both halves matter.
  *
- * Now it tracks scroll almost linearly. A 4% settle at each end is enough for a
- * beat to arrive and rest without the whole thing drifting, and smoothstep is
- * gentle where the old in/out cubic was violent — its slope never strays far
- * from 1, so what you scroll is what you get.
+ * The lead-in is tiny (2%) because scrubbed motion lives or dies on feeling
+ * attached to the input. An earlier version held 18% at BOTH ends: measured,
+ * 1% down the page gave t=0.000 and 3% still gave t=0.000, so 36% of every
+ * beat produced no movement and the rest ran at 4.67x scroll speed to catch
+ * up. Push the wheel, nothing happens, then it snaps past you.
+ *
+ * The DWELL is the opposite lesson. Motion that runs right up to the beat
+ * boundary and immediately hands over to the next has no weight — everything
+ * slides continuously and nothing lands. So the movement completes by 55% and
+ * then holds, still, for the remaining 45%. That stop is what gives a beat its
+ * punctuation: the eye catches up, reads the callout, and only then moves on.
+ * Rest is part of the choreography, not absence of it.
  */
+const LEAD_IN = 0.02
+const SETTLE_AT = 0.55
+
+/** Screens of still page before the first beat starts moving. */
+export const INTRO = 0.6
+
 function shape(t: number): number {
-  const HOLD = 0.04
-  if (t <= HOLD) return 0
-  if (t >= 1 - HOLD) return 1
-  const u = (t - HOLD) / (1 - HOLD * 2)
+  if (t <= LEAD_IN) return 0
+  if (t >= SETTLE_AT) return 1
+  const u = (t - LEAD_IN) / (SETTLE_AT - LEAD_IN)
   return u * u * (3 - 2 * u)
 }
 
@@ -67,9 +75,13 @@ export function useReel(beatCount: number): ReelState {
       const max = root.scrollHeight - window.innerHeight
       const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
 
-      const scaled = progress * beatCount
-      const beat = Math.min(beatCount - 1, Math.floor(scaled))
-      const within = Math.min(1, Math.max(0, scaled - beat))
+      // A still runway before the first beat. Animation that starts the instant
+      // the page loads gives the reader nothing to arrive at — they are still
+      // orienting while the first thing is already over. This buys a screen of
+      // calm, and the hint invites the scroll that starts the reel.
+      const scaled = progress * (beatCount + INTRO) - INTRO
+      const beat = Math.min(beatCount - 1, Math.max(0, Math.floor(scaled)))
+      const within = scaled < 0 ? 0 : Math.min(1, Math.max(0, scaled - beat))
       const eased = shape(within)
 
       // Continuous channels — compositor only, no React.
@@ -102,9 +114,9 @@ export function useReel(beatCount: number): ReelState {
 export function scrollToBeat(beat: number, beatCount: number) {
   const root = document.documentElement
   const max = root.scrollHeight - window.innerHeight
-  // Land a little into the beat so its animation is already resolving, rather
-  // than parking on the boundary where nothing has happened yet.
-  const target = ((beat + 0.4) / beatCount) * max
+  // Land in the beat's DWELL, where the motion has completed and the callouts
+  // are readable — parking on the boundary shows a beat that has not happened.
+  const target = ((beat + INTRO + 0.7) / (beatCount + INTRO)) * max
   window.scrollTo({
     top: target,
     behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
