@@ -79,6 +79,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         shell: fileURLToPath(new URL('./index.html', import.meta.url)),
+        // Standalone motion prototype — not linked from the shell, and marked
+        // noindex. Delete this entry (and src/prototype) once the reel work
+        // either lands in the real shell or is abandoned.
+        prototype: fileURLToPath(new URL('./prototype.html', import.meta.url)),
         table: page('table'),
         'folder-tree': page('folder-tree'),
         joystick: page('joystick'),
