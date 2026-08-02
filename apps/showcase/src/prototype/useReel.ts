@@ -70,7 +70,18 @@ function shape(t: number): number {
  * incoming one, which is the right place for it: nothing else is moving there,
  * so the swap gets the stage to itself.
  */
-export const SWAP_W = 0.3
+export const SWAP_W = 0.55
+
+/**
+ * How far the module travels and how small it gets at the handoff.
+ *
+ * Raised a long way from the first pass (90px / 0.78). At that depth the module
+ * barely receded, so the swap read as a cut rather than a transition — you saw
+ * the change without watching anything happen. Halving the scale is what makes
+ * it feel like the module is going somewhere.
+ */
+const SWAP_LIFT = 190
+const SWAP_MIN = 0.5
 
 /**
  * Writes the module handoff to CSS variables.
@@ -95,16 +106,21 @@ export function writeSwap(root: HTMLElement, scaled: number, boundaries: number[
     const d = scaled - b
     if (d < -SWAP_W || d > SWAP_W) continue
 
+    // Eased rather than linear, so the module accelerates away and settles on
+    // arrival instead of travelling at a constant rate — a linear ramp is a
+    // large part of why a transition reads as mechanical.
+    const ease = (u: number) => u * u * (3 - 2 * u)
+
     if (d < 0) {
-      const p = (d + SWAP_W) / SWAP_W // 0 → 1 as it leaves
-      mv = -p * 90
-      sc = 1 - p * 0.22
-      op = 1 - p * 0.85
+      const p = ease((d + SWAP_W) / SWAP_W) // 0 → 1 as it leaves
+      mv = -p * SWAP_LIFT
+      sc = 1 - p * (1 - SWAP_MIN)
+      op = 1 - p
     } else {
-      const q = d / SWAP_W // 0 → 1 as it arrives
-      mv = (1 - q) * 90
-      sc = 0.78 + q * 0.22
-      op = 0.15 + q * 0.85
+      const q = ease(d / SWAP_W) // 0 → 1 as it arrives
+      mv = (1 - q) * SWAP_LIFT
+      sc = SWAP_MIN + q * (1 - SWAP_MIN)
+      op = q
     }
     break
   }

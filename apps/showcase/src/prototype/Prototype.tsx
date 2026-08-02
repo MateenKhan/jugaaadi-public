@@ -33,6 +33,13 @@ const REDUCED =
  */
 const LOAD_SCALE = 1.9
 
+/**
+ * When the heading starts typing on first load — roughly when the ring has
+ * finished drawing itself round. Derived from LOAD_SCALE so changing the pacing
+ * dial keeps the text in step instead of stranding it.
+ */
+const TEXT_AFTER_DIAL = Math.round(4300 * LOAD_SCALE)
+
 export default function Prototype() {
   const beatCount = FLAT_BEATS.length
   // Beat indices where a new module begins — the points the handoff plays at.
@@ -50,6 +57,9 @@ export default function Prototype() {
   // the » control opens it the moment they want to go somewhere.
   const [railMode, setRailMode] = useState<RailMode>('icons')
   const [railOpen, setRailOpen] = useState(false) // small screens
+  // False until the entrance has played, so the first heading waits for the
+  // ring and every subsequent beat change types immediately.
+  const [booted, setBooted] = useState(false)
 
   const current = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
   const module = current.module
@@ -68,8 +78,18 @@ export default function Prototype() {
    */
   useEffect(() => {
     const host = dialRef.current
-    if (!host || REDUCED) return
-    if (document.visibilityState !== 'visible') return
+    if (!host || REDUCED) {
+      setBooted(true)
+      return
+    }
+    if (document.visibilityState !== 'visible') {
+      setBooted(true)
+      return
+    }
+    // Whatever happens to the timeline, the entrance must not gate the page
+    // forever — if it never completes, later beats would keep waiting for a
+    // lead-in that already passed.
+    const boot = window.setTimeout(() => setBooted(true), TEXT_AFTER_DIAL + 4000)
 
     const q = (sel: string) => host.querySelectorAll(sel)
     const d = (ms: number) => Math.round(ms * LOAD_SCALE)
@@ -79,43 +99,47 @@ export default function Prototype() {
     // stages that start before the previous one has landed all read as
     // happening at once, which feels fast however long each individually takes.
     // Nearly sequential, so you watch the dial being built a piece at a time.
-    tl.add(q('.dial__disc'), {
-      opacity: [0, 1],
-      scale: [0.7, 1],
-      duration: d(2000),
-      delay: d(500),
-    })
+    // The two sweeps are driven through plain objects rather than by animating
+    // a CSS variable directly — anime.js animates JS objects reliably, and
+    // `onUpdate` writes the value out. One less thing to be wrong about.
+    const outer = { v: 0 }
+    const inner = { v: 0 }
+    const write = (name: string, o: { v: number }) => () =>
+      host.style.setProperty(name, o.v.toFixed(4))
+
+    host.style.setProperty('--reveal', '0')
+    host.style.setProperty('--reveal-in', '0')
+
+    tl
+      // 1. The disc arrives.
+      .add(q('.dial__disc'), {
+        opacity: [0, 1],
+        scale: [0.7, 1],
+        duration: d(1600),
+        delay: d(400),
+      })
+      // 2. The ring DRAWS itself round, clockwise.
       .add(
-        q('.dial__arc'),
-        {
-          opacity: [0, 1],
-          scale: [0.86, 1],
-          // The arcs sweep in rather than fading, giving the ring a direction
-          // of assembly instead of simply appearing.
-          rotate: [-30, 0],
-          duration: d(1800),
-          delay: stagger(d(320)),
-        },
-        `-=${d(400)}`,
+        outer,
+        { v: 1, duration: d(2600), ease: 'inOut(2)', onUpdate: write('--reveal', outer) },
+        `-=${d(300)}`,
       )
+      // 3. The inner arcs draw the OPPOSITE way.
       .add(
-        q('.dial__ticks'),
-        { opacity: [0, 1], scale: [0.88, 1], rotate: [-18, 0], duration: d(2200) },
-        `-=${d(500)}`,
+        inner,
+        { v: 1, duration: d(2200), ease: 'inOut(2)', onUpdate: write('--reveal-in', inner) },
+        `-=${d(900)}`,
       )
-      .add(
-        q('.dial__inner i'),
-        { opacity: [0, 1], duration: d(1600), delay: stagger(d(420)) },
-        `-=${d(400)}`,
-      )
-      .add(q('.dial__dome'), { opacity: [0, 1], duration: d(1800) }, `-=${d(600)}`)
+      .add(q('.dial__dome'), { opacity: [0, 1], duration: d(1400) }, `-=${d(500)}`)
+      // 4. Only then the component itself.
       .add(
         q('.dial__module'),
-        { opacity: [0, 1], scale: [0.86, 1], duration: d(1800) },
-        `-=${d(700)}`,
+        { opacity: [0, 1], scale: [0.86, 1], duration: d(1500) },
+        `-=${d(500)}`,
       )
 
     return () => {
+      window.clearTimeout(boot)
       tl.pause()
     }
   }, [])
@@ -185,7 +209,9 @@ export default function Prototype() {
             version feel like scattered widgets rather than a designed page. */}
         <div className="hud" style={{ ['--hue' as string]: module.accent }}>
           <div className="hud__left">
-            <Callout beat={beat} />
+            {/* On first load the heading waits for the ring to finish drawing;
+                after that beats change with no lead-in. */}
+            <Callout beat={beat} startDelay={booted ? 0 : TEXT_AFTER_DIAL} />
           </div>
 
           {/* Install belongs with the other reference material, not floating
@@ -350,7 +376,7 @@ function InstallLine({ pkg }: { pkg: string }) {
  * characters: at this size a per-character stagger reads as noise, and words
  * land closer to how the sentence is actually read.
  */
-function Callout({ beat }: { beat: number }) {
+function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }) {
   const ref = useRef<HTMLHeadingElement>(null)
   const data = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
 
@@ -362,16 +388,28 @@ function Callout({ beat }: { beat: number }) {
     // that way indefinitely. An entrance nobody can see is not worth playing,
     // and leaving the text visible is the safe failure.
     if (document.visibilityState !== 'visible') return
-    const words = ref.current?.querySelectorAll('.word > span')
-    if (words?.length) {
-      animate(words, {
+    // TYPEWRITER. Each character snaps on rather than fading, which is what
+    // makes it read as typing rather than as a soft reveal — a long fade per
+    // glyph just looks like a blur. The rhythm comes from the stagger, not from
+    // the duration of any one character.
+    const chars = ref.current?.querySelectorAll('.char')
+    const caret = ref.current?.querySelector('.caret')
+    const perChar = 38
+    if (chars?.length) {
+      animate(chars, {
         opacity: [0, 1],
-        y: [18, 0],
-        filter: ['blur(8px)', 'blur(0px)'],
-        duration: 620,
-        delay: stagger(42),
-        ease: 'out(3)',
+        duration: 1,
+        delay: stagger(perChar, { start: startDelay }),
+        ease: 'linear',
       })
+      // The caret rides the end of the text while typing, then retires.
+      if (caret) {
+        animate(caret, {
+          opacity: [{ to: 1, duration: 1 }, { to: 0, duration: 300 }],
+          delay: startDelay + chars.length * perChar + 500,
+          ease: 'linear',
+        })
+      }
     }
     // Body and bullets follow the headline in one staggered wave, so the block
     // arrives as a paragraph rather than four separate fades.
@@ -379,25 +417,38 @@ function Callout({ beat }: { beat: number }) {
       '.callout__body, .callout__rule, .bullets li',
     )
     if (rest?.length) {
+      // Slide + fade, distinct from the heading's typing on purpose. Giving
+      // every element the same entrance is what made the earlier sequence read
+      // as one undifferentiated wash; different motion per role is what makes
+      // an order legible.
       animate(rest, {
         opacity: [0, 1],
-        y: [12, 0],
-        duration: 520,
-        delay: stagger(70, { start: 200 }),
-        ease: 'out(2)',
+        x: [-26, 0],
+        duration: 760,
+        delay: stagger(140, { start: startDelay + 420 }),
+        ease: 'out(3)',
       })
     }
-  }, [beat])
+  }, [beat, startDelay])
 
   return (
     <div className="callout">
       <span className="callout__eyebrow">{data.module.name}</span>
+      {/* Characters inside words. The chars are what the typewriter reveals;
+          the word wrappers are what keeps the line breaking on spaces rather
+          than mid-word, which per-character markup otherwise destroys. */}
       <h2 className="callout__title" ref={ref} key={`h-${beat}`}>
         {data.headline.split(' ').map((w, i) => (
           <span className="word" key={`${w}-${i}`}>
-            <span>{w}</span>
+            {[...w].map((c, j) => (
+              <span className="char" key={j}>
+                {c}
+              </span>
+            ))}
+            {i < data.headline.split(' ').length - 1 && <span className="char">&nbsp;</span>}
           </span>
         ))}
+        <span className="caret" aria-hidden="true" />
       </h2>
       <p className="callout__body" key={`b-${beat}`}>
         {data.body}

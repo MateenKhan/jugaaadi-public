@@ -328,11 +328,47 @@ body::before {
 .dial__ring { pointer-events: none; }
 .dial__arc, .bar__segment { pointer-events: auto; }
 
-.dial__ring { position: absolute; inset: 0; }
+/* ── round entrance ───────────────────────────────────────────────────────
+   The ring DRAWS itself round rather than fading in. A conic mask swept from
+   the top: `--reveal` 0 → 1 uncovers it clockwise. Because the mask sits on the
+   parent it clips the arcs, the tick bezel and the head together, so the whole
+   instrument is drawn by one hand.
+
+   The inner arcs use the inverse wedge, so they travel ANTICLOCKWISE against
+   it. Two sweeps in opposite directions read as a mechanism engaging; two in
+   the same direction would just look like one slow wipe. */
+.dial__ring {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: conic-gradient(from -90deg, #000 0 calc(var(--reveal, 1) * 360deg), transparent 0);
+  mask: conic-gradient(from -90deg, #000 0 calc(var(--reveal, 1) * 360deg), transparent 0);
+}
+
+.dial__inner {
+  -webkit-mask: conic-gradient(
+    from -90deg,
+    transparent 0 calc((1 - var(--reveal-in, 1)) * 360deg),
+    #000 0
+  );
+  mask: conic-gradient(
+    from -90deg,
+    transparent 0 calc((1 - var(--reveal-in, 1)) * 360deg),
+    #000 0
+  );
+}
 
 /* ── outer: one arc per module ────────────────────────────────────────────── */
 
-.dial__arcs { position: absolute; inset: 0; }
+/* Held back at 50% and brightening to full as the reel is read. The ring is
+   scene-setting at the start, not the subject — at full strength from the first
+   frame it competes with the module for attention and has nowhere left to go.
+   The lit sweep below still runs on top of this, so the two read together:
+   the whole ring warms while the travelled arc burns. */
+.dial__arcs {
+  position: absolute;
+  inset: 0;
+  opacity: calc(0.5 + var(--p, 0) * 0.5);
+}
 
 /* The travelled arc, lit. Previously the coloured ring was inert while you
    scrolled — the sweep only showed on the tick bezel, so the most prominent
@@ -803,14 +839,25 @@ body::before {
    crops descenders, which is why "Drag past" lost the tails of its g and p.
    The padding gives the glyphs room inside the clip; the equal negative margin
    keeps the line box exactly where it was, so nothing shifts. */
-.callout__title .word {
+/* Words keep the line breaking on spaces; the characters inside are what the
+   typewriter reveals. Per-character markup without the word wrapper would let
+   a line break fall mid-word. */
+.callout__title .word { display: inline-block; white-space: pre; }
+.callout__title .char { display: inline; will-change: opacity; }
+
+/* The typing caret. Blinks while the heading is being written, then retires —
+   a caret that stays forever stops reading as typing and starts reading as a
+   stray character. */
+.callout__title .caret {
   display: inline-block;
-  overflow: hidden;
-  padding: 0.14em 0.04em 0.2em;
-  margin: -0.14em -0.04em -0.2em;
+  width: 0.06em;
+  height: 0.78em;
+  margin-left: 0.06em;
+  vertical-align: baseline;
+  background: var(--hue, var(--accent));
+  animation: caret-blink 1s steps(1) infinite;
 }
-.callout__title .word > span { display: inline-block; will-change: transform, opacity, filter; }
-.callout__title .word + .word { margin-left: 0.22em; }
+@keyframes caret-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
 
 .callout__body {
   margin: 12px 0 0;
