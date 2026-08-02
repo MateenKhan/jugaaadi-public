@@ -27,7 +27,6 @@ export default function Prototype() {
   const { beat, step, started } = useReel(beatCount)
   const [railMode, setRailMode] = useState<RailMode>('expanded')
   const [railOpen, setRailOpen] = useState(false) // small screens
-  const [docsOpen, setDocsOpen] = useState<string | null>(null)
 
   const current = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
   const module = current.module
@@ -91,22 +90,24 @@ export default function Prototype() {
         {/* Everything else floats over the screen and is positioned against the
             viewport, not against the module — that is what keeps the stage
             feeling full-bleed instead of like a boxed panel with a sidebar. */}
-        <div className="hud">
-          <div className="hud__tl">
-            <ModuleHead module={module} />
-          </div>
-
-          <div className="hud__bl">
+        {/* The whole left column is ONE block — headline, prose, three bullets —
+            vertically centred, because that is what gives the composition its
+            balance. Splitting it across corners is what made the earlier
+            version feel like scattered widgets rather than a designed page. */}
+        <div className="hud" style={{ ['--hue' as string]: module.accent }}>
+          <div className="hud__left">
             <Callout beat={beat} />
           </div>
 
-          <div className="hud__br">
-            <Readout rows={current.readout ?? []} />
-            <Docs
-              module={module}
-              open={docsOpen}
-              onToggle={(id) => setDocsOpen((cur) => (cur === id ? null : id))}
-            />
+          {/* Install belongs with the other reference material, not floating
+              over the top-left corner competing with the headline. */}
+          <div className="hud__right">
+            <InstallLine pkg={module.install} />
+            {current.code && (
+              <pre className="code">
+                <code>{current.code}</code>
+              </pre>
+            )}
           </div>
         </div>
 
@@ -227,7 +228,7 @@ function Rail({
 
 /* ── aside ────────────────────────────────────────────────────────────────── */
 
-function ModuleHead({ module }: { module: (typeof MODULES)[number] }) {
+function InstallLine({ pkg }: { pkg: string }) {
   const [copied, setCopied] = useState(false)
   useEffect(() => {
     if (!copied) return
@@ -236,20 +237,17 @@ function ModuleHead({ module }: { module: (typeof MODULES)[number] }) {
   }, [copied])
 
   return (
-    <div className="head">
-      <span className="head__eyebrow">{module.glyph} {module.name}</span>
-      <button
-        type="button"
-        className="head__install"
-        onClick={() => {
-          navigator.clipboard?.writeText(module.install).then(() => setCopied(true), () => undefined)
-        }}
-        title="Copy"
-      >
-        <code>{module.install}</code>
-        <small>{copied ? 'copied' : 'copy'}</small>
-      </button>
-    </div>
+    <button
+      type="button"
+      className="install"
+      onClick={() => {
+        navigator.clipboard?.writeText(pkg).then(() => setCopied(true), () => undefined)
+      }}
+      title="Copy"
+    >
+      <code>{pkg}</code>
+      <small>{copied ? 'copied' : 'copy'}</small>
+    </button>
   )
 }
 
@@ -260,7 +258,6 @@ function ModuleHead({ module }: { module: (typeof MODULES)[number] }) {
  */
 function Callout({ beat }: { beat: number }) {
   const ref = useRef<HTMLHeadingElement>(null)
-  const bodyRef = useRef<HTMLParagraphElement>(null)
   const data = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
 
   useLayoutEffect(() => {
@@ -276,12 +273,17 @@ function Callout({ beat }: { beat: number }) {
         ease: 'out(3)',
       })
     }
-    if (bodyRef.current) {
-      animate(bodyRef.current, {
+    // Body and bullets follow the headline in one staggered wave, so the block
+    // arrives as a paragraph rather than four separate fades.
+    const rest = ref.current?.parentElement?.querySelectorAll(
+      '.callout__body, .callout__rule, .bullets li',
+    )
+    if (rest?.length) {
+      animate(rest, {
         opacity: [0, 1],
-        y: [10, 0],
+        y: [12, 0],
         duration: 520,
-        delay: 180,
+        delay: stagger(70, { start: 200 }),
         ease: 'out(2)',
       })
     }
@@ -289,6 +291,7 @@ function Callout({ beat }: { beat: number }) {
 
   return (
     <div className="callout">
+      <span className="callout__eyebrow">{data.module.name}</span>
       <h2 className="callout__title" ref={ref} key={`h-${beat}`}>
         {data.headline.split(' ').map((w, i) => (
           <span className="word" key={`${w}-${i}`}>
@@ -296,58 +299,28 @@ function Callout({ beat }: { beat: number }) {
           </span>
         ))}
       </h2>
-      <p className="callout__body" ref={bodyRef} key={`b-${beat}`}>
+      <p className="callout__body" key={`b-${beat}`}>
         {data.body}
       </p>
+
+      <span className="callout__rule" />
+
+      <ul className="bullets" key={`u-${beat}`}>
+        {data.bullets.map((b) => (
+          <li key={b}>
+            <i aria-hidden="true">→</i>
+            {b}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
 
-function Readout({ rows }: { rows: [string, string][] }) {
-  if (!rows.length) return null
-  return (
-    <dl className="readout">
-      {rows.map(([k, v]) => (
-        <div className="readout__row" key={k}>
-          <dt>{k}</dt>
-          <dd>{v}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-/** Docs stay shut by default — the output is what people came for. */
-function Docs({
-  module,
-  open,
-  onToggle,
-}: {
-  module: (typeof MODULES)[number]
-  open: string | null
-  onToggle: (id: string) => void
-}) {
-  const panels = [
-    { id: 'usage', title: 'Usage', body: `import { ${module.name.replace(/\s/g, '')} } from '${module.install.replace('npm i ', '')}'` },
-    { id: 'props', title: 'Props', body: 'Every option is typed, with sensible defaults. Full table in the docs.' },
-    { id: 'events', title: 'Events', body: 'onStart, onChange, onEnd — plus a headless hook if you want the maths only.' },
-  ]
-  return (
-    <div className="docs">
-      {panels.map((p) => (
-        <div className={`docs__item${open === p.id ? ' is-open' : ''}`} key={p.id}>
-          <button type="button" className="docs__trigger" onClick={() => onToggle(p.id)}>
-            {p.title}
-            <i aria-hidden="true">{open === p.id ? '−' : '+'}</i>
-          </button>
-          <div className="docs__panel">
-            <p>{p.body}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
+/* The readout table and the Usage/Props/Events accordion used to live here.
+   Both are gone: they filled the right-hand third with material nobody reads
+   during a demo reel, and that space is exactly what the composition needed.
+   Reference material belongs on the library's own docs page. */
 
 /* ── about ────────────────────────────────────────────────────────────────── */
 

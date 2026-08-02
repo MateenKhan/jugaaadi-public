@@ -529,18 +529,22 @@ body::before {
   box-shadow: 0 0 8px rgba(255, 90, 54, 0.9);
 }
 
+/* Bigger than the first attempt — at 11.5px these read as incidental metadata
+   rather than as part of the diagram. The reference sets its callouts at
+   roughly body size. */
 .note__label {
   position: absolute;
   transform: translateY(-50%);
   font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: 0.02em;
-  color: var(--fg-mute);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  color: var(--fg);
   white-space: nowrap;
   opacity: 0;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
 }
-.note__label--left { right: calc(100% + 26px); text-align: right; }
-.note__label--right { left: calc(100% + 26px); }
+.note__label--left { right: calc(100% + 30px); text-align: right; }
+.note__label--right { left: calc(100% + 30px); }
 
 .dial__count {
   position: absolute;
@@ -579,14 +583,25 @@ body::before {
    to the same token the dial uses, or the copy lands on the tick strip. */
 .stage[data-progress='bar'] .hud { grid-template-columns: 1fr var(--dial-bar) 1fr; }
 .hud > * { pointer-events: auto; min-width: 0; }
-.hud__tl { grid-area: tl; }
-.hud__bl { grid-area: bl; align-self: end; }
-.hud__br {
+
+/* One centred block on the left, one stack bottom-right. That is the whole
+   composition — the previous four-corner scatter is what made it read as
+   widgets rather than a page. */
+.hud__left {
+  grid-area: bl;
+  grid-row: 1 / -1;
+  align-self: center;
+  max-width: 34ch;
+}
+.hud__right {
   grid-area: br;
   align-self: end;
+  justify-self: end;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: 34ch;
 }
 
 .stage__hint {
@@ -608,33 +623,76 @@ body::before {
 
 /* ── aside content ────────────────────────────────────────────────────────── */
 
-.head { display: flex; flex-direction: column; gap: 10px; }
-.head__eyebrow {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--accent);
-}
-.head__install {
+.install {
   display: inline-flex; align-items: center; gap: 10px;
-  align-self: flex-start;
-  padding: 7px 11px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0.4);
   cursor: pointer;
   transition: border-color 180ms ease;
 }
-.head__install:hover { border-color: rgba(255,90,54,0.5); }
-.head__install code { font-family: var(--mono); font-size: 12px; color: var(--fg); }
-.head__install small { font-size: 10px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+.install:hover { border-color: var(--hue, var(--accent)); }
+.install code { font-family: var(--mono); font-size: 12.5px; color: var(--fg); }
+.install small { font-size: 10px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+
+/* The code panel, matching the reference's bottom-right slot. */
+.code {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--fg-mute);
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.callout__eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--hue, var(--accent));
+}
+
+.callout__rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 24px 0 18px;
+  background: var(--line);
+  opacity: 0;
+}
+
+.bullets { list-style: none; margin: 0; padding: 0; }
+.bullets li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 14.5px;
+  font-weight: 550;
+  color: var(--fg);
+  opacity: 0;
+}
+.bullets i { font-style: normal; color: var(--hue, var(--accent)); font-size: 13px; }
 
 .callout__title {
   margin: 0;
-  font-size: clamp(28px, 3.6vw, 52px);
-  line-height: 1.04;
+  font-size: clamp(30px, 3.4vw, 50px);
+  line-height: 1.05;
   letter-spacing: -0.035em;
   font-weight: 750;
-  /* The copy sits over the stage, so it needs to stay legible if a visual
-     drifts behind it. */
+  /* Coloured per module, like the reference recolours each section's headline.
+     It is the single strongest signal that you have moved to a new library. */
+  color: var(--hue, var(--fg));
   text-shadow: 0 2px 30px rgba(0, 0, 0, 0.75);
 }
 .callout__title .word { display: inline-block; overflow: hidden; padding-bottom: 0.06em; }
