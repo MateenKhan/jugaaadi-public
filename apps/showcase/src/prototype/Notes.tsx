@@ -36,7 +36,16 @@ function leader(note: Note): string {
   return `M ${note.x} ${note.y} L ${elbowX} ${note.labelY} L ${endX} ${note.labelY}`
 }
 
-export default function Notes({ notes, beat }: { notes: Note[]; beat: number }) {
+export default function Notes({
+  notes,
+  beat,
+  startDelay = 0,
+}: {
+  notes: Note[]
+  beat: number
+  /** Holds the callouts back on first load until the dial and copy have landed. */
+  startDelay?: number
+}) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -51,7 +60,7 @@ export default function Notes({ notes, beat }: { notes: Note[]; beat: number }) 
     const line = animate(paths, {
       draw: ['0 0', '0 1'],
       duration: 700,
-      delay: stagger(110),
+      delay: stagger(110, { start: startDelay }),
       ease: 'out(3)',
     })
 
@@ -61,15 +70,26 @@ export default function Notes({ notes, beat }: { notes: Note[]; beat: number }) 
       opacity: [0, 1],
       x: notes.map((n) => (n.side === 'left' ? -12 : 12)),
       duration: 460,
-      delay: stagger(110, { start: 260 }),
+      delay: stagger(110, { start: startDelay + 260 }),
       ease: 'out(2)',
     })
 
+    const dots = animate(host.querySelectorAll('.note__dot'), {
+      opacity: [0, 1],
+      scale: [0, 1],
+      duration: 380,
+      delay: stagger(110, { start: startDelay }),
+      ease: 'out(3)',
+    })
+
     return () => {
-      line.pause()
-      labels.pause()
+      // Reverted, not paused — a paused reveal leaves its targets stranded at
+      // the `from` state, and StrictMode's double invoke would stack two.
+      line.revert()
+      labels.revert()
+      dots.revert()
     }
-  }, [beat, notes])
+  }, [beat, notes, startDelay])
 
   if (!notes.length) return null
 

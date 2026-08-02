@@ -38,7 +38,7 @@ const LOAD_SCALE = 1.9
  * finished drawing itself round. Derived from LOAD_SCALE so changing the pacing
  * dial keeps the text in step instead of stranding it.
  */
-const TEXT_AFTER_DIAL = Math.round(3200 * LOAD_SCALE)
+const TEXT_AFTER_DIAL = Math.round(2100 * LOAD_SCALE)
 
 export default function Prototype() {
   const beatCount = FLAT_BEATS.length
@@ -111,12 +111,15 @@ export default function Prototype() {
     host.style.setProperty('--reveal-in', '0')
 
     tl
-      // 1. The disc arrives.
+      // 1. The disc arrives — quickly. It is a flat black circle, so there is
+      //    nothing to watch while it grows; a slow expand on a shape with no
+      //    detail is just a delay before the interesting part. Roughly a third
+      //    of what it was, and barely scaling.
       .add(q('.dial__disc'), {
         opacity: [0, 1],
-        scale: [0.7, 1],
-        duration: d(1600),
-        delay: d(400),
+        scale: [0.92, 1],
+        duration: d(520),
+        delay: d(250),
       })
       // 2. The ring DRAWS itself round, clockwise. Quicker than the rest of the
       //    sequence on purpose — a sweep has visible travel, so it reads as
@@ -199,7 +202,13 @@ export default function Prototype() {
             {/* Callouts live inside the module box so their coordinates are
                 percentages of the thing they point at, and their leader lines
                 run out past it into the margins. */}
-            <Notes notes={current.notes ?? []} beat={beat} />
+            {/* Last of all on first load — the leader lines are annotation, and
+                annotating a diagram that has not finished drawing is backwards. */}
+            <Notes
+              notes={current.notes ?? []}
+              beat={beat}
+              startDelay={booted ? 0 : TEXT_AFTER_DIAL + 1100}
+            />
           </div>
         </div>
 
@@ -399,9 +408,14 @@ function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }
     const caret = ref.current?.querySelector('.caret')
     const perChar = 38
     const timers: number[] = []
+    let typing: ReturnType<typeof animate> | null = null
+    let sliding: ReturnType<typeof animate> | null = null
 
     if (chars?.length) {
-      animate(chars, {
+      // Kept so the cleanup can cancel it. Without that, StrictMode's double
+      // invoke in dev leaves TWO staggered animations running over the same
+      // characters — which is the heading appearing to type itself twice.
+      typing = animate(chars, {
         opacity: [0, 1],
         duration: 1,
         delay: stagger(perChar, { start: startDelay }),
@@ -431,7 +445,7 @@ function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }
       // every element the same entrance is what made the earlier sequence read
       // as one undifferentiated wash; different motion per role is what makes
       // an order legible.
-      animate(rest, {
+      sliding = animate(rest, {
         opacity: [0, 1],
         x: [-26, 0],
         duration: 760,
@@ -442,6 +456,10 @@ function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }
 
     return () => {
       timers.forEach((t) => window.clearTimeout(t))
+      // Cancel rather than leave running. Two overlapping reveals on the same
+      // targets is what produced the doubled typing.
+      typing?.revert()
+      sliding?.revert()
     }
   }, [beat, startDelay])
 
