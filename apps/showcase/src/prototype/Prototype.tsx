@@ -38,7 +38,7 @@ const LOAD_SCALE = 1.9
  * finished drawing itself round. Derived from LOAD_SCALE so changing the pacing
  * dial keeps the text in step instead of stranding it.
  */
-const TEXT_AFTER_DIAL = Math.round(4300 * LOAD_SCALE)
+const TEXT_AFTER_DIAL = Math.round(3200 * LOAD_SCALE)
 
 export default function Prototype() {
   const beatCount = FLAT_BEATS.length
@@ -118,17 +118,20 @@ export default function Prototype() {
         duration: d(1600),
         delay: d(400),
       })
-      // 2. The ring DRAWS itself round, clockwise.
+      // 2. The ring DRAWS itself round, clockwise. Quicker than the rest of the
+      //    sequence on purpose — a sweep has visible travel, so it reads as
+      //    deliberate at a speed that would feel abrupt for a fade.
       .add(
         outer,
-        { v: 1, duration: d(2600), ease: 'inOut(2)', onUpdate: write('--reveal', outer) },
+        { v: 1, duration: d(1500), ease: 'inOut(2)', onUpdate: write('--reveal', outer) },
         `-=${d(300)}`,
       )
-      // 3. The inner arcs draw the OPPOSITE way.
+      // 3. The inner arcs draw the OPPOSITE way, overlapping the tail of the
+      //    outer sweep so the two are briefly turning against each other.
       .add(
         inner,
-        { v: 1, duration: d(2200), ease: 'inOut(2)', onUpdate: write('--reveal-in', inner) },
-        `-=${d(900)}`,
+        { v: 1, duration: d(1250), ease: 'inOut(2)', onUpdate: write('--reveal-in', inner) },
+        `-=${d(800)}`,
       )
       .add(q('.dial__dome'), { opacity: [0, 1], duration: d(1400) }, `-=${d(500)}`)
       // 4. Only then the component itself.
@@ -395,6 +398,8 @@ function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }
     const chars = ref.current?.querySelectorAll('.char')
     const caret = ref.current?.querySelector('.caret')
     const perChar = 38
+    const timers: number[] = []
+
     if (chars?.length) {
       animate(chars, {
         opacity: [0, 1],
@@ -402,13 +407,18 @@ function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }
         delay: stagger(perChar, { start: startDelay }),
         ease: 'linear',
       })
-      // The caret rides the end of the text while typing, then retires.
+
+      // The caret exists only while characters are actually landing — it
+      // appears with the first one and leaves shortly after the last.
       if (caret) {
-        animate(caret, {
-          opacity: [{ to: 1, duration: 1 }, { to: 0, duration: 300 }],
-          delay: startDelay + chars.length * perChar + 500,
-          ease: 'linear',
-        })
+        caret.classList.remove('is-typing')
+        timers.push(
+          window.setTimeout(() => caret.classList.add('is-typing'), startDelay),
+          window.setTimeout(
+            () => caret.classList.remove('is-typing'),
+            startDelay + chars.length * perChar + 700,
+          ),
+        )
       }
     }
     // Body and bullets follow the headline in one staggered wave, so the block
@@ -428,6 +438,10 @@ function Callout({ beat, startDelay = 0 }: { beat: number; startDelay?: number }
         delay: stagger(140, { start: startDelay + 420 }),
         ease: 'out(3)',
       })
+    }
+
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t))
     }
   }, [beat, startDelay])
 

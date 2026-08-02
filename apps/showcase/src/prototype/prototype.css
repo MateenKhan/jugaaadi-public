@@ -848,6 +848,11 @@ body::before {
 /* The typing caret. Blinks while the heading is being written, then retires —
    a caret that stays forever stops reading as typing and starts reading as a
    stray character. */
+/* Hidden unless actively typing. It used to blink from page load, so during
+   the entrance's lead-in there was a caret pulsing beside an empty line with
+   nothing being written — a cursor with no text reads as a stray mark, not as
+   typing. The class is added when the first character lands and removed when
+   the last one does. */
 .callout__title .caret {
   display: inline-block;
   width: 0.06em;
@@ -855,8 +860,9 @@ body::before {
   margin-left: 0.06em;
   vertical-align: baseline;
   background: var(--hue, var(--accent));
-  animation: caret-blink 1s steps(1) infinite;
+  opacity: 0;
 }
+.callout__title .caret.is-typing { animation: caret-blink 0.9s steps(1) infinite; }
 @keyframes caret-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
 
 .callout__body {
