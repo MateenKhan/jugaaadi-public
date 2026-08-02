@@ -236,26 +236,13 @@ body::before {
   height: var(--dial);
   display: grid;
   place-items: center;
-  /* The handoff transform is written by anime.js now (see useModuleSwap), not
-     by CSS variables — so nothing is declared here beyond the hint. */
+  /* The module handoff, scrubbed. `--mv`, `--sc` and `--op` are written per
+     frame by useReel: the outgoing module rises and shrinks away, the next
+     grows up from below. Combining the lift with the scale is what sells it as
+     depth rather than a slide — the thing recedes as it leaves. */
+  transform: translateY(calc(var(--mv, 0) * 1px)) scale(var(--sc, 1));
+  opacity: var(--op, 1);
   will-change: transform, opacity;
-}
-
-/* Anchors for the ScrollObserver. Zero-width, invisible, purely positional:
-   anime.js maps scroll onto an animation by watching a real element pass
-   through the viewport, so each module boundary needs something to watch. */
-.runway { position: relative; }
-.runway__marker {
-  position: absolute;
-  left: 0;
-  width: 1px;
-  pointer-events: none;
-  /* `opacity: 0`, deliberately NOT `visibility: hidden` and never
-     `display: none`. The observer has to measure this element's box as it
-     crosses the viewport, and hidden elements are exactly the sort of thing an
-     intersection-style API is entitled to skip. Opacity leaves it fully laid
-     out and observable while showing nothing. */
-  opacity: 0;
 }
 
 /* The ring was too bulky: at 74% the module left a fat donut of chrome around

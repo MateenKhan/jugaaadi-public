@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { animate, stagger, createTimeline, onScroll } from 'animejs'
+import { animate, stagger, createTimeline } from 'animejs'
 import { MODULES, FLAT_BEATS } from './modules'
-import { useReel, scrollToBeat, INTRO, SWAP_W } from './useReel'
+import { useReel, scrollToBeat, INTRO } from './useReel'
 import Visual from './Visuals'
 import Dial from './Dial'
 import Notes from './Notes'
@@ -33,8 +33,7 @@ export default function Prototype() {
       }, []),
     [],
   )
-  const { beat, step, started } = useReel(beatCount)
-  const markerRefs = useRef<Record<number, HTMLElement | null>>({})
+  const { beat, step, started } = useReel(beatCount, boundaries)
   // Icons by default. The demo is what people came for, and an expanded rail
   // spends 264px of the widest screens on navigation nobody has asked for yet;
   // the » control opens it the moment they want to go somewhere.
@@ -44,60 +43,6 @@ export default function Prototype() {
   const current = FLAT_BEATS[beat] ?? FLAT_BEATS[0]
   const module = current.module
   const dialRef = useRef<HTMLDivElement>(null)
-
-  /**
-   * The module handoff, as an anime.js ScrollObserver rather than hand-rolled.
-   *
-   * This used to be three CSS variables computed in my own rAF loop. It works,
-   * but it reads RAW scroll position, so the transition inherits every judder
-   * of the wheel. `sync` links the timeline to scroll and `syncSmooth` puts a
-   * damper on it — the transition glides where mine tracked the input exactly,
-   * which is most of the difference between "scrubbed" and "polished".
-   *
-   * One observer per boundary, each watching its own marker span in the runway.
-   * The keyframes teleport from -90 to +90 at the midpoint while opacity is 0,
-   * so a single mounted element can play both halves: it recedes upward, and
-   * the next module — already swapped in by then — grows back up from below.
-   * Interpolating through the middle instead would slide it across the stage.
-   */
-  useEffect(() => {
-    const dial = dialRef.current
-    if (!dial || REDUCED) return
-
-    const observers = boundaries
-      .map((b) => markerRefs.current[b])
-      .filter((el): el is HTMLElement => !!el)
-      .map((marker) =>
-        animate(dial, {
-          keyframes: {
-            '0%': { y: 0, scale: 1, opacity: 1 },
-            '49%': { y: -90, scale: 0.78, opacity: 0 },
-            '51%': { y: 90, scale: 0.78, opacity: 0 },
-            '100%': { y: 0, scale: 1, opacity: 1 },
-          },
-          ease: 'inOut(2)',
-          autoplay: onScroll({
-            target: marker,
-            // Progress runs as the marker crosses the viewport's middle, which
-            // is where the fixed stage sits — so the swap peaks exactly as the
-            // boundary passes the module.
-            enter: 'top center',
-            leave: 'bottom center',
-            // A NUMBER, not `true`. `sync: true` links the timeline to scroll
-            // position exactly, which is what the hand-rolled version already
-            // did and which inherits every judder of the wheel. A number is the
-            // damped form — the library normalises it into syncSmooth — so the
-            // transition glides toward the scroll position instead of being
-            // pinned to it. This is the whole reason for the conversion.
-            sync: 2,
-          }),
-        }),
-      )
-
-    return () => {
-      observers.forEach((a) => a.revert())
-    }
-  }, [boundaries])
 
   /**
    * The dial assembles itself on load, slowly, from the outside in.
@@ -116,18 +61,34 @@ export default function Prototype() {
     if (document.visibilityState !== 'visible') return
 
     const q = (sel: string) => host.querySelectorAll(sel)
-    const tl = createTimeline({ defaults: { ease: 'out(3)' } })
+    const tl = createTimeline({ defaults: { ease: 'out(4)' } })
 
-    tl.add(q('.dial__disc'), { opacity: [0, 1], scale: [0.82, 1], duration: 1100 })
+    // Each stage is roughly twice as long as it was and the overlaps are much
+    // smaller, so the parts arrive one after another instead of piling up. The
+    // whole sequence runs about five seconds — very slow for UI, but this is an
+    // establishing shot and its only job is to be watched.
+    tl.add(q('.dial__disc'), { opacity: [0, 1], scale: [0.72, 1], duration: 1700, delay: 250 })
       .add(
         q('.dial__arc'),
-        { opacity: [0, 1], scale: [0.9, 1], duration: 900, delay: stagger(110) },
-        '-=800',
+        {
+          opacity: [0, 1],
+          scale: [0.86, 1],
+          // The arcs sweep in rather than just fading, which gives the ring a
+          // direction of assembly instead of appearing all at once.
+          rotate: [-26, 0],
+          duration: 1500,
+          delay: stagger(190),
+        },
+        '-=700',
       )
-      .add(q('.dial__ticks'), { opacity: [0, 1], scale: [0.94, 1], duration: 1000 }, '-=700')
-      .add(q('.dial__inner i'), { opacity: [0, 1], duration: 800, delay: stagger(150) }, '-=650')
-      .add(q('.dial__dome'), { opacity: [0, 1], duration: 900 }, '-=600')
-      .add(q('.dial__module'), { opacity: [0, 1], scale: [0.94, 1], duration: 800 }, '-=750')
+      .add(
+        q('.dial__ticks'),
+        { opacity: [0, 1], scale: [0.9, 1], rotate: [-14, 0], duration: 1800 },
+        '-=900',
+      )
+      .add(q('.dial__inner i'), { opacity: [0, 1], duration: 1300, delay: stagger(260) }, '-=600')
+      .add(q('.dial__dome'), { opacity: [0, 1], duration: 1500 }, '-=900')
+      .add(q('.dial__module'), { opacity: [0, 1], scale: [0.88, 1], duration: 1400 }, '-=1000')
 
     return () => {
       tl.pause()
@@ -221,31 +182,12 @@ export default function Prototype() {
       </div>
 
       {/* The scroll runway the fixed stage reads: one screen per beat, plus the
-          still intro screen before the first one starts moving.
-
-          The markers are what anime.js's ScrollObserver watches. It needs a real
-          element passing through the viewport to map scroll onto an animation,
-          so each module boundary gets a zero-width span spanning its swap
-          window. They are invisible and inert — pure anchors. */}
+          still intro screen before the first one starts moving. */}
       <div
         className="runway"
         style={{ height: `${(beatCount + INTRO) * 100}vh` }}
         aria-hidden="true"
-      >
-        {boundaries.map((b) => (
-          <span
-            key={b}
-            ref={(el) => {
-              markerRefs.current[b] = el
-            }}
-            className="runway__marker"
-            style={{
-              top: `${((b + INTRO - SWAP_W) / (beatCount + INTRO)) * 100}%`,
-              height: `${((SWAP_W * 2) / (beatCount + INTRO)) * 100}%`,
-            }}
-          />
-        ))}
-      </div>
+      />
 
       <About />
     </div>
