@@ -56,29 +56,39 @@ export default function Prototype() {
         <span /><span /><span />
       </button>
 
-      {/* ── the fixed stage ─────────────────────────────────────────────── */}
+      {/* ── the fixed, full-screen stage ────────────────────────────────── */}
       <div className={`stage${reelDone ? ' is-done' : ''}`} aria-hidden={reelDone}>
-        <div className="stage__output">
-          <Visual module={module} beat={current.beatIndex} step={step} />
+        {/* The module sits dead centre with the scroll dial drawn AROUND it, so
+            the progress reads as belonging to the thing you are looking at
+            rather than as a widget parked in a corner. */}
+        <div className="dial">
+          <ScrollDial beat={beat} beatCount={beatCount} onJump={(b) => scrollToBeat(b, beatCount)} />
+          <div className="dial__module">
+            <Visual module={module} beat={current.beatIndex} step={step} />
+          </div>
         </div>
 
-        <aside className="stage__aside">
-          <ModuleHead module={module} />
-          <Callout beat={beat} />
-          <Readout rows={current.readout ?? []} />
-          <Docs
-            module={module}
-            open={docsOpen}
-            onToggle={(id) => setDocsOpen((cur) => (cur === id ? null : id))}
-          />
-        </aside>
+        {/* Everything else floats over the screen and is positioned against the
+            viewport, not against the module — that is what keeps the stage
+            feeling full-bleed instead of like a boxed panel with a sidebar. */}
+        <div className="hud">
+          <div className="hud__tl">
+            <ModuleHead module={module} />
+          </div>
 
-        <ProgressRing
-          beat={beat}
-          step={step}
-          beatCount={beatCount}
-          onStep={(d) => scrollToBeat(Math.min(beatCount - 1, Math.max(0, beat + d)), beatCount)}
-        />
+          <div className="hud__bl">
+            <Callout beat={beat} />
+          </div>
+
+          <div className="hud__br">
+            <Readout rows={current.readout ?? []} />
+            <Docs
+              module={module}
+              open={docsOpen}
+              onToggle={(id) => setDocsOpen((cur) => (cur === id ? null : id))}
+            />
+          </div>
+        </div>
 
         <div className={`stage__hint${started ? ' is-gone' : ''}`}>
           <span>scroll</span>
@@ -321,48 +331,51 @@ function Docs({
 
 /* ── progress ring ────────────────────────────────────────────────────────── */
 
-function ProgressRing({
+/**
+ * The scroll dial — drawn AROUND the module rather than parked in a corner, so
+ * the progress plainly belongs to the thing being demonstrated.
+ *
+ * The sweep is a stroked circle whose dashoffset comes from `--p`, the variable
+ * `useReel` writes each frame, so it stays continuous without React. One tick
+ * per beat sits on the same circle, and each tick is a button — the dial doubles
+ * as a jump menu, which is also why the reel never needs to trap scroll.
+ */
+function ScrollDial({
   beat,
-  step,
   beatCount,
-  onStep,
+  onJump,
 }: {
   beat: number
-  step: number
   beatCount: number
-  onStep: (delta: number) => void
+  onJump: (beat: number) => void
 }) {
-  const R = 26
+  const R = 47 // in the 100×100 viewBox
   const C = 2 * Math.PI * R
-  // The sweep itself is driven by `--p` in CSS so it stays smooth between
-  // renders; this is only for assistive tech, which does not need 60fps.
-  const approx = Math.round(((beat + step / 8) / beatCount) * 100)
 
   return (
-    <div className="ring">
-      <button type="button" className="ring__nav" onClick={() => onStep(-1)} aria-label="Previous">
-        ↑
-      </button>
-      <div
-        className="ring__dial"
-        role="progressbar"
-        aria-valuenow={approx}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        style={{ ['--c' as string]: `${C.toFixed(2)}px` }}
-      >
-        <svg viewBox="0 0 64 64" width="64" height="64">
-          <circle cx="32" cy="32" r={R} className="ring__track" />
-          <circle cx="32" cy="32" r={R} className="ring__value" />
-        </svg>
-        <span className="ring__count">
-          {beat + 1}
-          <i>/{beatCount}</i>
-        </span>
+    <div className="dial__ring" style={{ ['--c' as string]: `${C.toFixed(3)}` }}>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r={R} className="dial__track" />
+        <circle cx="50" cy="50" r={R} className="dial__sweep" pathLength={1} />
+      </svg>
+
+      {/* Ticks are laid out with a rotation per beat, so they need no maths at
+          paint time and stay perfectly on the circle at any size. */}
+      <div className="dial__ticks">
+        {Array.from({ length: beatCount }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`dial__tick${i === beat ? ' is-active' : ''}${i < beat ? ' is-past' : ''}`}
+            style={{ transform: `rotate(${(i / beatCount) * 360}deg)` }}
+            onClick={() => onJump(i)}
+            aria-label={`Go to step ${i + 1} of ${beatCount}`}
+            aria-current={i === beat}
+          >
+            <i />
+          </button>
+        ))}
       </div>
-      <button type="button" className="ring__nav" onClick={() => onStep(1)} aria-label="Next">
-        ↓
-      </button>
     </div>
   )
 }
