@@ -4,6 +4,7 @@ import { MODULES, FLAT_BEATS } from './modules'
 import { useReel, scrollToBeat } from './useReel'
 import Visual from './Visuals'
 import Dial, { IdleCore } from './Dial'
+import Notes from './Notes'
 
 /**
  * Motion prototype — layout and animation language only, dummy content.
@@ -80,6 +81,10 @@ export default function Prototype() {
 
           <div className="dial__module">
             <Visual module={module} beat={current.beatIndex} step={step} />
+            {/* Callouts live inside the module box so their coordinates are
+                percentages of the thing they point at, and their leader lines
+                run out past it into the margins. */}
+            <Notes notes={current.notes ?? []} beat={beat} />
           </div>
         </div>
 

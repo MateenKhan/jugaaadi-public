@@ -15,6 +15,27 @@ export type Beat = {
   body: string
   /** Fake readout rows, so the side panel has the shape it will really have. */
   readout?: [string, string][]
+  /**
+   * Callouts that point AT the thing they name, the way a technical drawing
+   * labels a part — a leader line from an anchor on the visual out to a label
+   * in the margin, drawn in when the beat becomes active.
+   *
+   * Free-floating pills were the previous version and they were the problem:
+   * a chip reading "3 rows" tells you nothing if it is not visibly attached to
+   * the three rows. `x`/`y` are percentages of the module box.
+   */
+  notes?: Note[]
+}
+
+export type Note = {
+  text: string
+  /** Anchor point on the visual, in % of the module box. */
+  x: number
+  y: number
+  /** Which margin the label sits in. */
+  side: 'left' | 'right'
+  /** Vertical position of the label itself, in % — lets labels stack cleanly. */
+  labelY: number
 }
 
 export type Module = {
@@ -57,6 +78,11 @@ export const MODULES: Module[] = [
           ['x', '0.0'],
           ['y', '-4.2'],
           ['deflect', '0.82'],
+        ],
+        notes: [
+          { text: 'thumb', x: 50, y: 62, side: 'left', labelY: 30 },
+          { text: 'travel ring', x: 78, y: 30, side: 'right', labelY: 18 },
+          { text: 'dead zone', x: 50, y: 50, side: 'left', labelY: 62 },
         ],
       },
       {
@@ -107,6 +133,11 @@ export const MODULES: Module[] = [
           ['inferred', 'linear +2'],
           ['filled', '6 cells'],
         ],
+        notes: [
+          { text: 'source cells', x: 38, y: 22, side: 'left', labelY: 14 },
+          { text: 'inferred step', x: 38, y: 62, side: 'left', labelY: 58 },
+          { text: 'fill handle', x: 46, y: 78, side: 'right', labelY: 82 },
+        ],
       },
       {
         label: 'Formulas',
@@ -124,6 +155,11 @@ export const MODULES: Module[] = [
         readout: [
           ['selection', '3 rows'],
           ['actions', '6'],
+        ],
+        notes: [
+          { text: 'selection', x: 30, y: 46, side: 'left', labelY: 34 },
+          { text: 'row actions first', x: 62, y: 46, side: 'right', labelY: 30 },
+          { text: 'format demoted', x: 62, y: 66, side: 'right', labelY: 74 },
         ],
       },
     ],

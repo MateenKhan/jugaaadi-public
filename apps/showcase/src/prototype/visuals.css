@@ -8,13 +8,18 @@
   place-items: center;
 }
 
+/* Superseded by the leader-line callouts (see Notes.tsx). Free-floating pills
+   named things without pointing at them, which is why they read as clutter
+   dumped in a corner. Kept only as a low-key state strip. */
 .viz-chips {
   position: absolute;
-  left: 20px;
-  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -30px;
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  opacity: 0.75;
 }
 
 .viz-chip {
