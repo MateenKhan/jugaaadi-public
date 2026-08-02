@@ -27,7 +27,7 @@
     "@ai-sdk/xai": "^4.0.6",
     "@jugaaadi/advance-scroll-input": "^0.0.2",
     "@jugaaadi/folder-tree": "^0.0.1",
-    "@jugaaadi/joystick": "^0.0.1",
+    "@jugaaadi/joystick": "^0.0.2",
     "@jugaaadi/table": "^0.0.1",
     "ai": "^7.0.0",
     "animejs": "^4.5.0",

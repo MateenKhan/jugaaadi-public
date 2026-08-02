@@ -93,7 +93,7 @@ export const LIBRARIES: Library[] = [
     repo: 'https://github.com/MateenKhan/joystick',
     docs: 'https://joystick.jugaaadi.com',
     status: 'published',
-    version: '0.0.1',
+    version: '0.0.2',
   },
   {
     slug: 'advance-scroll-input',

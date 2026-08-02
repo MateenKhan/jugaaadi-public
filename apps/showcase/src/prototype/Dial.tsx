@@ -72,6 +72,20 @@ function RingProgress({ arcs, beat, beatCount, onJump }: Props) {
           opaque, so nesting it inside the ring layer painted it over the module
           and the core and emptied the middle of the dial. */}
       <span className="dial__disc" aria-hidden="true" />
+
+      {/* Three offset hairline arcs, lower right — the reference's depth trick.
+          Each is a circle with only two borders coloured, then rotated, which
+          is far cheaper than stroking real arcs and reads identically. */}
+      <span className="dial__inner" aria-hidden="true">
+        {[
+          { r: 0, a: 12 },
+          { r: 3, a: 26 },
+          { r: 6, a: 40 },
+        ].map((s) => (
+          <i key={s.r} style={{ ['--r' as string]: s.r, ['--a' as string]: s.a }} />
+        ))}
+      </span>
+
       <span className="dial__dome" aria-hidden="true" />
 
       <div className="dial__ring">

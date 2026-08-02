@@ -256,9 +256,12 @@ body::before {
    Density is the point — a handful of shapes reads as a diagram, a hundred-odd
    reads as something alive. Each line is a 1px div scaled on X, so the whole
    field animates on the compositor. */
+/* Big. In the reference the animated shape FILLS the inner disc — it is the
+   star of the frame, not a texture behind the star. At inset 20% this sat in a
+   large dark void and read as a faint smudge. */
 .idle-core {
   position: absolute;
-  inset: 20%;
+  inset: 13%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -275,15 +278,15 @@ body::before {
   background: linear-gradient(
     to right,
     rgba(255, 60, 70, 0) 0%,
-    rgba(255, 72, 76, 0.75) 22%,
-    rgba(255, 128, 110, 0.95) 50%,
-    rgba(255, 72, 76, 0.75) 78%,
+    rgba(255, 82, 86, 0.9) 20%,
+    rgba(255, 150, 130, 1) 50%,
+    rgba(255, 82, 86, 0.9) 80%,
     rgba(255, 60, 70, 0) 100%
   );
   transform: scaleX(0.4);
   will-change: transform;
 }
-.idle-core--dense { inset: 22%; }
+.idle-core--dense { inset: 15%; }
 .dial--bar .idle-core { inset: 6% 12%; opacity: 0.5; }
 
 /* Paint order, back to front: sunken disc, morphing core, the module itself,
@@ -316,20 +319,44 @@ body::before {
     inset 0 2px 30px rgba(0, 0, 0, 0.9),
     inset 0 0 0 1px rgba(255, 255, 255, 0.045);
 }
+/* A glass SHEEN, not a wash. The reference has a distinct crescent catching
+   light in the upper left — a soft radial blob just looks like fog. This is a
+   conic wedge clipped to a band, which gives it a defined leading edge. */
 .dial__dome {
   position: absolute;
-  inset: 9%;
+  inset: 12%;
   border-radius: 50%;
   pointer-events: none;
-  /* One soft off-centre highlight reads as a glass lens over the whole dial.
-     Kept very low contrast — at full strength it looks like a white smear. */
-  background: radial-gradient(
-    58% 46% at 30% 22%,
-    rgba(255, 255, 255, 0.085) 0%,
-    rgba(255, 255, 255, 0.03) 45%,
-    transparent 72%
+  background: conic-gradient(
+    from 268deg,
+    rgba(255, 255, 255, 0.13) 0deg,
+    rgba(255, 255, 255, 0.06) 26deg,
+    transparent 52deg,
+    transparent 360deg
   );
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 62%, #000 66% 96%, transparent 99%);
+  mask: radial-gradient(circle closest-side, transparent 0 62%, #000 66% 96%, transparent 99%);
+  filter: blur(3px);
   z-index: 3;
+}
+
+/* The thin cream arcs the reference stacks at the lower right — they are what
+   stop the ring looking like a single flat band. */
+.dial__inner {
+  position: absolute;
+  inset: 11%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+}
+.dial__inner i {
+  position: absolute;
+  inset: calc(var(--r) * 1%);
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-right-color: rgba(255, 226, 214, 0.5);
+  border-bottom-color: rgba(255, 226, 214, 0.28);
+  transform: rotate(calc(var(--a) * 1deg));
 }
 
 .dial__arc {
@@ -362,9 +389,12 @@ body::before {
 
 /* ── middle: the dense tick ring ──────────────────────────────────────────── */
 
+/* Inset further than the arcs so there is a visible GAP between the coloured
+   ring and the tick bezel. In the reference those are two clearly separate
+   instruments; jammed together they read as one muddy donut. */
 .dial__ticks {
   position: absolute;
-  inset: 3%;
+  inset: 7%;
   border-radius: 50%;
   /* The unlit ticks. `repeating-conic-gradient` draws every tick in one paint,
      and the radial mask clips the disc down to a band — so tick COUNT costs
