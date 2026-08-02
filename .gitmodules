@@ -1,0 +1,15 @@
+[submodule "packages/table"]
+	path = packages/table
+	url = https://github.com/MateenKhan/table.git
+[submodule "packages/folder-tree"]
+	path = packages/folder-tree
+	url = https://github.com/MateenKhan/folder-tree.git
+[submodule "packages/joystick"]
+	path = packages/joystick
+	url = https://github.com/MateenKhan/joystick.git
+[submodule "packages/advance-scroll-input"]
+	path = packages/advance-scroll-input
+	url = https://github.com/MateenKhan/advance-scroll-input.git
+[submodule "packages/db-browser"]
+	path = packages/db-browser
+	url = https://github.com/MateenKhan/db-browser.git

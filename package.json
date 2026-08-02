@@ -1,0 +1,29 @@
+{
+  "name": "jugaaadi-public",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The home of every open-source @jugaaadi npm package — each library as a tab, one showcase site at public.jugaaadi.com.",
+  "license": "MIT",
+  "author": "Mateen Khan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MateenKhan/jugaaadi-public.git"
+  },
+  "homepage": "https://public.jugaaadi.com",
+  "workspaces": [
+    "apps/showcase"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @jugaaadi/showcase",
+    "build": "npm run build -w @jugaaadi/showcase",
+    "preview": "npm run preview -w @jugaaadi/showcase",
+    "typecheck": "npm run typecheck -w @jugaaadi/showcase",
+    "sync": "git submodule update --init --recursive",
+    "sync:latest": "git submodule update --init --remote --recursive",
+    "deploy": "bash deploy/deploy.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

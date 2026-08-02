@@ -1,0 +1,189 @@
+/* Chrome shared by the demo documents. Each demo runs in its own iframe, so
+   this can safely style html/body without touching the shell or a sibling. */
+
+:root {
+  --bg: #0b0e14;
+  --panel: #11151f;
+  --line: #1f2633;
+  --fg: #e6ebf4;
+  --fg-muted: #8b97ad;
+  --fg-dim: #5d6779;
+  --accent: #ff5a36;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.demo {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px 24px;
+  overflow: auto;
+}
+
+.demo__hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  flex: 0 0 auto;
+}
+
+.demo__hint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.demo__body {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 18px;
+}
+
+.panel--stage {
+  flex: 1 1 340px;
+  min-width: 280px;
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+}
+
+.panel--side {
+  flex: 0 1 320px;
+  min-width: 250px;
+}
+
+.panel__label {
+  margin: 0 0 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* Live numeric readout — tabular figures so digits don't jitter as they change. */
+.readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px 14px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.readout dt {
+  color: var(--fg-dim);
+}
+
+.readout dd {
+  margin: 0;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--fg-muted);
+  max-height: 190px;
+  overflow: auto;
+}
+
+.log li {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log li:last-child {
+  border-bottom: 0;
+}
+
+.log__empty {
+  color: var(--fg-dim);
+  font-style: italic;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.unit-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b0e14;
+  width: fit-content;
+}
+
+.unit-switch button {
+  appearance: none;
+  border: 0;
+  background: none;
+  border-radius: 5px;
+  padding: 5px 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.unit-switch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+}

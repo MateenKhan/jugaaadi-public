@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.vite/
+*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# Deploy secrets — never commit VPS credentials
+deploy/.env
