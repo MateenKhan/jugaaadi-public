@@ -26,6 +26,15 @@ export type Module = {
   install: string
   /** Drives the placeholder visual — each shape reacts to beat progress. */
   visual: 'ring' | 'grid' | 'tree' | 'slider' | 'nodes'
+  /**
+   * How this module shows scroll progress.
+   *
+   * A ring only makes sense around something ROUND. Wrapped around a
+   * spreadsheet or a file tree it fights the content — a grid is rectangular
+   * and the circle just crops it awkwardly — so those modules get a linear
+   * tick strip instead, which is the same instrument idiom laid out flat.
+   */
+  progress: 'ring' | 'bar'
   beats: Beat[]
 }
 
@@ -37,6 +46,8 @@ export const MODULES: Module[] = [
     tagline: 'Touch-first analogue stick',
     install: 'npm i @jugaaadi/joystick',
     visual: 'ring',
+    // Round content, round progress.
+    progress: 'ring',
     beats: [
       {
         label: 'Drag',
@@ -85,6 +96,8 @@ export const MODULES: Module[] = [
     tagline: 'Spreadsheet-grade data grid',
     install: 'npm i @jugaaadi/table',
     visual: 'grid',
+    // A ring around a spreadsheet crops the grid and fights it. Flat strip.
+    progress: 'bar',
     beats: [
       {
         label: 'Fill series',
@@ -122,6 +135,7 @@ export const MODULES: Module[] = [
     tagline: 'Drag-and-drop tree view',
     install: 'npm i @jugaaadi/folder-tree',
     visual: 'tree',
+    progress: 'bar',
     beats: [
       {
         label: 'Reorder',
@@ -156,6 +170,7 @@ export const MODULES: Module[] = [
     tagline: 'Unit-aware number input',
     install: 'npm i @jugaaadi/advance-scroll-input',
     visual: 'slider',
+    progress: 'bar',
     beats: [
       {
         label: 'Scrub',
@@ -193,6 +208,7 @@ export const MODULES: Module[] = [
     tagline: 'BYOK multi-provider layer',
     install: 'npm i @jugaaadi/ai-providers',
     visual: 'nodes',
+    progress: 'ring',
     beats: [
       {
         label: 'Registry',

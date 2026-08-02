@@ -16,6 +16,10 @@
   /* Diameter of the module + its scroll dial. vmin keeps it whole on short
      laptop screens, where vh alone would push the ring off the bottom. */
   --dial: min(62vmin, 640px);
+  /* The flat variant is wider than the ring — a grid needs horizontal room. It
+     is a token because the HUD must reserve exactly this width for its middle
+     column, or the copy lands on top of the strip. */
+  --dial-bar: min(calc(62vmin * 1.55), 780px);
   --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 }
@@ -234,13 +238,53 @@ body::before {
   place-items: center;
 }
 
+/* The ring was too bulky: at 74% the module left a fat donut of chrome around
+   it. Pushing the content out to 86% turns the ring into a thin halo that
+   frames the demo instead of competing with it. The bar variant has no ring at
+   all, so the module takes the whole box and the strip sits underneath. */
 .dial__module {
   position: relative;
-  width: 74%;
-  height: 74%;
+  width: 86%;
+  height: 86%;
   display: grid;
   place-items: center;
 }
+.dial--bar { width: var(--dial-bar); height: auto; }
+.dial--bar .dial__module { width: 100%; height: auto; }
+
+/* The idle core: a dense field of lines whose envelope never stops morphing.
+   Density is the point — a handful of shapes reads as a diagram, a hundred-odd
+   reads as something alive. Each line is a 1px div scaled on X, so the whole
+   field animates on the compositor. */
+.idle-core {
+  position: absolute;
+  inset: 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+.idle-core__line {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--accent) 18%,
+    var(--accent-2) 50%,
+    var(--accent) 82%,
+    transparent
+  );
+  transform: scaleX(0.15);
+  will-change: transform, opacity;
+}
+.idle-core--dense { inset: 14%; }
+.dial--bar .idle-core { inset: -18% -4%; opacity: 0.3; }
+
+.dial__module, .dial__ring, .bar { position: relative; z-index: 1; }
 
 .dial__ring { position: absolute; inset: 0; }
 
@@ -277,7 +321,7 @@ body::before {
 
 .dial__ticks {
   position: absolute;
-  inset: 6%;
+  inset: 3%;
   border-radius: 50%;
   /* The unlit ticks. `repeating-conic-gradient` draws every tick in one paint,
      and the radial mask clips the disc down to a band — so tick COUNT costs
@@ -287,9 +331,11 @@ body::before {
     rgba(255, 255, 255, 0.16) 0deg calc(360deg / var(--ticks) * 0.42),
     transparent calc(360deg / var(--ticks) * 0.42) calc(360deg / var(--ticks))
   );
-  /* closest-side — see the note on .dial__arc. */
-  -webkit-mask: radial-gradient(circle closest-side, transparent 0 78%, #000 79% 100%);
-  mask: radial-gradient(circle closest-side, transparent 0 78%, #000 79% 100%);
+  /* closest-side — see the note on .dial__arc. A narrow band (91%→100% rather
+     than 78%) is what takes the bulk out: hairline ticks hugging the edge read
+     as an instrument bezel, a wide band reads as a donut. */
+  -webkit-mask: radial-gradient(circle closest-side, transparent 0 90%, #000 91% 100%);
+  mask: radial-gradient(circle closest-side, transparent 0 90%, #000 91% 100%);
 }
 
 /* The lit portion — same tick geometry, clipped to the scroll progress. Two
@@ -330,23 +376,76 @@ body::before {
   box-shadow: 0 0 14px 2px rgba(255, 90, 54, 0.85);
 }
 
-/* ── inner: the idle core ─────────────────────────────────────────────────── */
+/* ── flat variant: the same instrument, laid out straight ─────────────────── */
 
-.dial__core {
+.bar {
   position: absolute;
-  inset: 12%;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  opacity: 0.34;
-  pointer-events: none;
+  left: 0;
+  right: 0;
+  bottom: -46px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
-.dial__core ellipse {
-  fill: none;
-  stroke: var(--accent-2);
-  stroke-width: 0.7;
-  vector-effect: non-scaling-stroke;
+
+.bar__segments { display: flex; gap: 3px; height: 2px; }
+.bar__segment {
+  border: 0;
+  padding: 0;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--hue);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 220ms ease, box-shadow 220ms ease;
 }
+.bar__segment:hover { opacity: 1; box-shadow: 0 0 10px var(--hue); }
+
+.bar__ticks {
+  position: relative;
+  height: 22px;
+  /* Same idiom as the ring: one gradient cuts every tick, a second gradient
+     clipped by `--p` lights the travelled portion. */
+  /* A PLAIN gradient tiled by background-size — not a repeating-gradient. Using
+     both double-tiles: the gradient then repeats inside each tile, the
+     transparent run collapses, and the whole strip fills solid. */
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px);
+  background-size: calc(100% / var(--ticks)) 100%;
+  background-repeat: repeat-x;
+  -webkit-mask: linear-gradient(to bottom, #000 0 60%, transparent 100%);
+  mask: linear-gradient(to bottom, #000 0 60%, transparent 100%);
+}
+
+.bar__ticks-lit {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, var(--accent) 0 1px, transparent 1px);
+  background-size: calc(100% / var(--ticks)) 100%;
+  background-repeat: repeat-x;
+  filter: drop-shadow(0 0 4px rgba(255, 90, 54, 0.85));
+  -webkit-mask: linear-gradient(to right, #000 0 calc(var(--p, 0) * 100%), transparent 0);
+  mask: linear-gradient(to right, #000 0 calc(var(--p, 0) * 100%), transparent 0);
+}
+
+.bar__head {
+  position: absolute;
+  top: -3px;
+  bottom: 6px;
+  width: 2px;
+  left: calc(var(--p, 0) * 100%);
+  background: var(--accent);
+  box-shadow: 0 0 12px 2px rgba(255, 90, 54, 0.9);
+}
+
+.bar__count {
+  align-self: flex-end;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-mute);
+  letter-spacing: 0.06em;
+}
+.bar__count i { font-style: normal; color: var(--fg-dim); }
 
 .dial__count {
   position: absolute;
@@ -381,6 +480,9 @@ body::before {
     'bl . br';
   gap: 18px 28px;
 }
+/* The flat variant is wider, so the reservation has to widen with it — matched
+   to the same token the dial uses, or the copy lands on the tick strip. */
+.stage[data-progress='bar'] .hud { grid-template-columns: 1fr var(--dial-bar) 1fr; }
 .hud > * { pointer-events: auto; min-width: 0; }
 .hud__tl { grid-area: tl; }
 .hud__bl { grid-area: bl; align-self: end; }

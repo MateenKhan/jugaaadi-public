@@ -3,7 +3,7 @@ import { animate, stagger } from 'animejs'
 import { MODULES, FLAT_BEATS } from './modules'
 import { useReel, scrollToBeat } from './useReel'
 import Visual from './Visuals'
-import Dial from './Dial'
+import Dial, { IdleCore } from './Dial'
 
 /**
  * Motion prototype — layout and animation language only, dummy content.
@@ -58,12 +58,26 @@ export default function Prototype() {
       </button>
 
       {/* ── the fixed, full-screen stage ────────────────────────────────── */}
-      <div className={`stage${reelDone ? ' is-done' : ''}`} aria-hidden={reelDone}>
+      <div
+        className={`stage${reelDone ? ' is-done' : ''}`}
+        data-progress={module.progress}
+        aria-hidden={reelDone}
+      >
         {/* The module sits dead centre with the scroll dial drawn AROUND it, so
             the progress reads as belonging to the thing you are looking at
             rather than as a widget parked in a corner. */}
-        <div className="dial">
-          <Dial beat={beat} beatCount={beatCount} onJump={(b) => scrollToBeat(b, beatCount)} />
+        <div className={`dial dial--${module.progress}`}>
+          {/* Always running, whatever the module — this is what keeps the page
+              from freezing solid the moment the reader stops scrolling. */}
+          <IdleCore dense={module.progress === 'ring'} />
+
+          <Dial
+            module={module}
+            beat={beat}
+            beatCount={beatCount}
+            onJump={(b) => scrollToBeat(b, beatCount)}
+          />
+
           <div className="dial__module">
             <Visual module={module} beat={current.beatIndex} step={step} />
           </div>

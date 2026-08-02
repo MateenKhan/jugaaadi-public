@@ -1,76 +1,73 @@
 import { useEffect, useRef } from 'react'
-import { animate, stagger, svg } from 'animejs'
-import { MODULES } from './modules'
+import { animate, stagger } from 'animejs'
+import { MODULES, type Module } from './modules'
 
 /**
- * The scroll dial: dense radial ticks, one coloured arc per module, and a core
- * that keeps drawing itself whether or not you are scrolling.
+ * Scroll progress, in whichever shape suits the module.
  *
- * Two things make this read the way the anime.js site does, and neither is the
- * scroll wiring:
+ * `ring` wraps round content (the joystick, the provider constellation).
+ * `bar` is the same instrument idiom laid out flat, for content that is
+ * rectangular — a spreadsheet or a file tree. Wrapping a circle round a grid
+ * crops it and fights the shape, which is why the variant exists at all.
  *
- *  1. DENSITY. A thin circle with a dozen dots looks like a widget. ~160 hairline
- *     ticks read as an instrument. They are cut with a repeating-conic-gradient
- *     MASK rather than 160 DOM nodes, and the lit portion is a second conic
- *     gradient driven by `--p` — so the sweep costs one composited layer and no
- *     JS at all, at any tick count.
- *
- *  2. IDLE MOTION. A page that is completely still whenever the reader stops
- *     scrolling feels dead. The core is a nest of ellipses animated with
- *     anime.js `createDrawable`, looping forever — the same `draw` technique the
- *     Scroll Observer demo uses — so there is always something breathing behind
- *     the module.
+ * Both share the same trick: ticks are cut with a repeating-conic (or repeating-
+ * linear) gradient MASK rather than one DOM node per tick, so density is free,
+ * and the lit portion is a second gradient clipped by `--p`. The sweep is
+ * therefore a composited layer that costs no JS at any tick count.
  */
 
-const TICKS = 160
+const RING_TICKS = 180
+const BAR_TICKS = 90
 
-/** Per-module hues for the outer arc segments. */
 const ARC_COLOURS = ['#ff5a36', '#3ddad7', '#a78bfa', '#facc15', '#4ade80', '#38bdf8']
 
 export default function Dial({
+  module,
   beat,
   beatCount,
   onJump,
 }: {
+  module: Module
   beat: number
   beatCount: number
   onJump: (beat: number) => void
 }) {
-  const coreRef = useRef<SVGSVGElement>(null)
-
-  // The idle core. `createDrawable` turns each ellipse into something whose
-  // stroke can be drawn from nothing and retracted again; staggering the set and
-  // looping gives a continuous, non-repeating-looking swirl.
-  useEffect(() => {
-    const host = coreRef.current
-    if (!host) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    const drawables = svg.createDrawable(host.querySelectorAll('ellipse'))
-    const anim = animate(drawables, {
-      draw: ['0 0', '0 1', '1 1'],
-      duration: 5200,
-      delay: stagger(110),
-      ease: 'inOut(3)',
-      loop: true,
-    })
-    return () => {
-      anim.pause()
-    }
-  }, [])
-
-  // Where each module starts, as a fraction of the whole reel — this is what
-  // makes the outer arcs line up with the ticks they describe.
+  // Where each module starts, so arcs/segments line up with what they describe.
   let running = 0
   const arcs = MODULES.map((m, i) => {
     const from = running / beatCount
+    const startBeat = running
     running += m.beats.length
-    return { module: m, from, to: running / beatCount, colour: ARC_COLOURS[i % ARC_COLOURS.length], startBeat: running - m.beats.length }
+    return {
+      module: m,
+      from,
+      to: running / beatCount,
+      colour: ARC_COLOURS[i % ARC_COLOURS.length],
+      startBeat,
+    }
   })
 
+  return module.progress === 'ring' ? (
+    <RingProgress arcs={arcs} onJump={onJump} beat={beat} beatCount={beatCount} />
+  ) : (
+    <BarProgress arcs={arcs} onJump={onJump} beat={beat} beatCount={beatCount} />
+  )
+}
+
+type Arc = {
+  module: Module
+  from: number
+  to: number
+  colour: string
+  startBeat: number
+}
+type Props = { arcs: Arc[]; beat: number; beatCount: number; onJump: (b: number) => void }
+
+/* ── ring ─────────────────────────────────────────────────────────────────── */
+
+function RingProgress({ arcs, beat, beatCount, onJump }: Props) {
   return (
     <div className="dial__ring">
-      {/* Outer: one arc per module. Clickable, so the dial is also the map. */}
       <div className="dial__arcs">
         {arcs.map((a) => (
           <button
@@ -88,26 +85,10 @@ export default function Dial({
         ))}
       </div>
 
-      {/* Middle: the dense tick ring. Lit portion follows `--p`. */}
-      <div className="dial__ticks" style={{ ['--ticks' as string]: TICKS }} aria-hidden="true">
+      <div className="dial__ticks" style={{ ['--ticks' as string]: RING_TICKS }} aria-hidden="true">
         <span className="dial__ticks-lit" />
       </div>
 
-      {/* Inner: the idle core, behind the module. */}
-      <svg className="dial__core" viewBox="0 0 200 200" ref={coreRef} aria-hidden="true">
-        {Array.from({ length: 16 }).map((_, i) => (
-          <ellipse
-            key={i}
-            cx="100"
-            cy="100"
-            rx={30 + i * 2.4}
-            ry={62 - i * 0.6}
-            transform={`rotate(${(i * 180) / 16} 100 100)`}
-          />
-        ))}
-      </svg>
-
-      {/* The beat head — a single marker riding the ring at the current point. */}
       <div className="dial__head" aria-hidden="true">
         <i />
       </div>
@@ -116,6 +97,97 @@ export default function Dial({
         {beat + 1}
         <i>/{beatCount}</i>
       </span>
+    </div>
+  )
+}
+
+/* ── bar ──────────────────────────────────────────────────────────────────── */
+
+function BarProgress({ arcs, beat, beatCount, onJump }: Props) {
+  return (
+    <div className="bar">
+      <div className="bar__segments">
+        {arcs.map((a) => (
+          <button
+            key={a.module.slug}
+            type="button"
+            className="bar__segment"
+            style={{
+              flexGrow: a.module.beats.length,
+              ['--hue' as string]: a.colour,
+            }}
+            onClick={() => onJump(a.startBeat)}
+            aria-label={`Go to ${a.module.name}`}
+          />
+        ))}
+      </div>
+
+      <div className="bar__ticks" style={{ ['--ticks' as string]: BAR_TICKS }} aria-hidden="true">
+        <span className="bar__ticks-lit" />
+        <span className="bar__head" />
+      </div>
+
+      <span className="bar__count">
+        {beat + 1}
+        <i>/{beatCount}</i>
+      </span>
+    </div>
+  )
+}
+
+/**
+ * The idle core — a nest of ellipses continuously drawn and retracted with
+ * anime.js `createDrawable`.
+ *
+ * Split out of the ring because it is not progress: it is the reason the page
+ * is never completely still. A composition that freezes the moment the reader
+ * stops scrolling reads as dead, so this loops regardless of scroll and sits
+ * behind whichever module is on stage.
+ */
+export function IdleCore({ dense }: { dense?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const lines = dense ? 108 : 64
+
+  useEffect(() => {
+    const host = ref.current
+    if (!host) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const bars = host.querySelectorAll<HTMLElement>('.idle-core__line')
+
+    // A field of lines whose WIDTHS morph, staggered from the centre outwards.
+    // The envelope is what the eye reads — diamond, then pinched, then wide —
+    // and it comes free from `stagger(..., { from: 'center' })` plus a keyframe
+    // list, rather than from choreographing 108 elements by hand.
+    const field = animate(bars, {
+      scaleX: [{ to: 0.12 }, { to: 1 }, { to: 0.38 }, { to: 0.9 }, { to: 0.2 }],
+      opacity: [{ to: 0.25 }, { to: 0.85 }, { to: 0.4 }, { to: 0.75 }, { to: 0.3 }],
+      duration: 4200,
+      delay: stagger(16, { from: 'center' }),
+      ease: 'inOut(2)',
+      loop: true,
+      alternate: true,
+    })
+
+    // A second, slower pass on a subset keeps it from ever looking periodic.
+    const drift = animate(host, {
+      scaleY: [1, 1.08, 0.96, 1],
+      duration: 9000,
+      ease: 'inOut(2)',
+      loop: true,
+    })
+
+    return () => {
+      field.pause()
+      drift.pause()
+    }
+  }, [lines])
+
+  return (
+    <div className={`idle-core${dense ? ' idle-core--dense' : ''}`} ref={ref} aria-hidden="true">
+      {Array.from({ length: lines }).map((_, i) => (
+        <i key={i} className="idle-core__line" />
+      ))}
     </div>
   )
 }
